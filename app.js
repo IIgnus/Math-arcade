@@ -21,7 +21,7 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-import { loadContent, formatContentReport } from './js/content-loader.js';
+import { loadStemContent(, formatContentReport } from './js/content-loader.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -32,7 +32,7 @@ const firebaseConfig = {
   appId: '1:1021658486810:web:c98decd8bcdef9e0ea99a3'
 };
 
-const { courses: COURSES, report: CONTENT_REPORT } = loadContent({ blockOnErrors: true });
+const { courses: COURSES, report: CONTENT_REPORT } = loadStemContent(({ blockOnErrors: true });
 const $ = id => document.getElementById(id);
 
 const DEFAULT_PLAYER = {
