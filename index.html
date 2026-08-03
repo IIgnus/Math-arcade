@@ -9,29 +9,12 @@
 </head>
 <body>
   <header class="topbar">
-<header class="topbar">
-  <button
-    class="brand"
-    data-view="home-view"
-    aria-label="Go home"
-  >
-    🧠 STEM Quest
-  </button>
-
-  <div class="top-stats">
-    <span id="streak-tag" class="stat-pill">
-      🔥 0
-    </span>
-
-    <span id="heart-tag" class="stat-pill">
-      ❤️ 5
-    </span>
-
-    <span id="xp-tag" class="stat-pill">
-      ⚡ 0 XP
-    </span>
-  </div>
-</header>
+    <button class="brand" data-view="home-view" aria-label="Go home">🧠 STEM Quest</button>
+    <div class="top-stats">
+      <span id="streak-tag" class="stat-pill">🔥 0</span>
+      <span id="heart-tag" class="stat-pill">❤️ 5</span>
+      <span id="xp-tag" class="stat-pill">⚡ 0 XP</span>
+    </div>
   </header>
 
   <main>
@@ -155,8 +138,39 @@
         </div>
 
         <div id="calculator-box" class="panel calculator-panel hidden">
-          <input id="calc-display" class="field calc-display" readonly>
-          <div id="calc-grid" class="calc-grid"></div>
+          <div class="calculator-head">
+            <div>
+              <p class="eyebrow">LEARNING CALCULATOR</p>
+              <h3 id="calculator-title">Basic calculator</h3>
+            </div>
+            <span id="calculator-unlock-note" class="badge">Basic mode</span>
+          </div>
+
+          <div class="tool-tabs calculator-tabs">
+            <button class="tab-btn active" data-calc-mode="basic">Basic</button>
+            <button class="tab-btn" data-calc-mode="scientific">Scientific 🔒</button>
+            <button class="tab-btn" data-calc-mode="graphing">Graphing 🔒</button>
+          </div>
+
+          <div id="basic-calc-pane" class="calculator-pane active">
+            <input id="calc-display" class="field calc-display" readonly aria-label="Calculator display">
+            <div id="calc-grid" class="calc-grid"></div>
+          </div>
+
+          <div id="scientific-calc-pane" class="calculator-pane">
+            <input id="scientific-display" class="field calc-display" readonly aria-label="Scientific calculator display">
+            <div id="scientific-grid" class="calc-grid scientific-grid"></div>
+          </div>
+
+          <div id="graphing-calc-pane" class="calculator-pane">
+            <label class="graph-input-row">
+              <span>y =</span>
+              <input id="graph-expression" class="field" value="2*x+1" placeholder="Example: 2*x+1">
+              <button id="draw-graph-btn" class="btn primary">Graph</button>
+            </label>
+            <canvas id="graph-canvas" width="900" height="460"></canvas>
+            <p class="tiny muted">Use x, +, −, *, /, ^, sin(x), cos(x), tan(x), sqrt(x), log(x) and ln(x).</p>
+          </div>
         </div>
       </div>
     </section>
@@ -208,300 +222,99 @@
       </div>
     </section>
 
-    <section id="settings-view" class="view">
-<section id="profile-view" class="view">
-  <div class="panel content-panel profile-page">
+    <section id="profile-view" class="view">
+      <div class="panel content-panel profile-page">
+        <div class="profile-header-card">
+          <div id="profile-avatar" class="large-profile-avatar">🎓</div>
+          <div class="profile-header-copy">
+            <p class="eyebrow">YOUR PROFILE</p>
+            <h1 id="profile-display-name">Learner</h1>
+            <p id="profile-account-type" class="muted">Local account</p>
+            <div class="profile-level-row">
+              <span id="profile-level-badge" class="badge">Level 1</span>
+              <span id="profile-xp-copy" class="muted">0 total XP</span>
+            </div>
+          </div>
+        </div>
 
-    <div class="profile-header-card">
-      <div
-        id="profile-avatar"
-        class="large-profile-avatar"
-      >
-        🎓
-      </div>
+        <div class="profile-stat-grid">
+          <div class="profile-stat-card"><span>🔥</span><strong id="profile-streak-value">0</strong><small>Day streak</small></div>
+          <div class="profile-stat-card"><span>🎯</span><strong id="profile-accuracy-value">0%</strong><small>Accuracy</small></div>
+          <div class="profile-stat-card"><span>📘</span><strong id="profile-lessons-value">0</strong><small>Lessons completed</small></div>
+          <div class="profile-stat-card"><span>🏅</span><strong id="profile-topics-value">0</strong><small>Topics mastered</small></div>
+        </div>
 
-      <div class="profile-header-copy">
-        <p class="eyebrow">
-          YOUR PROFILE
-        </p>
+        <div class="profile-section">
+          <p class="eyebrow">PROFILE DETAILS</p>
+          <h2>Display name</h2>
+          <p class="muted">Use a nickname rather than your full real name.</p>
+          <div class="profile-name-row">
+            <input id="profile-name-input" class="field" type="text" maxlength="24" placeholder="Display nickname">
+            <button id="save-profile-btn" class="btn primary">Save name</button>
+          </div>
+        </div>
 
-        <h1 id="profile-display-name">
-          Learner
-        </h1>
+        <div class="profile-section">
+          <p class="eyebrow">CALCULATOR TOOLBOX</p>
+          <h2>Your unlocked tools</h2>
+          <div id="calculator-unlocks" class="unlock-grid"></div>
+          <p class="muted">Basic is always available on calculator questions. Scientific unlocks after Division reaches 70% mastery. Graphing unlocks after Expanding brackets reaches 70% mastery.</p>
+        </div>
 
-        <p
-          id="profile-account-type"
-          class="muted"
-        >
-          Local account
-        </p>
+        <div class="profile-section">
+          <p class="eyebrow">LEARNING SETTINGS</p>
+          <h2>Personalise your learning</h2>
+          <label class="setting-field">Theme
+            <select id="theme-select" class="field">
+              <option value="quest">Quest green</option>
+              <option value="ocean">Ocean blue</option>
+              <option value="night">Night mode</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+          <label class="setting-field">Practice timer
+            <select id="timer-select" class="field">
+              <option value="0">Off</option><option value="60">60 seconds</option><option value="45">45 seconds</option><option value="30">30 seconds</option>
+            </select>
+          </label>
+          <label class="toggle-line"><input id="sound-toggle" type="checkbox" checked> Sound effects and text-to-speech</label>
+          <label class="toggle-line"><input id="reduced-motion-toggle" type="checkbox"> Reduce animations</label>
+          <button id="save-settings-btn" class="btn primary">Save settings</button>
+        </div>
 
-        <div class="profile-level-row">
-          <span
-            id="profile-level-badge"
-            class="badge"
-          >
-            Level 1
-          </span>
+        <div class="profile-section">
+          <p class="eyebrow">HELP IMPROVE STEM QUEST</p>
+          <h2>Send feedback</h2>
+          <label class="setting-field">Category
+            <select id="feedback-category" class="field">
+              <option value="incorrect-question">Question is incorrect</option>
+              <option value="confusing-explanation">Explanation is confusing</option>
+              <option value="technical-issue">Technical issue</option>
+              <option value="suggestion">Suggestion</option>
+            </select>
+          </label>
+          <textarea id="feedback-message" class="field feedback-textarea" maxlength="1000" placeholder="Tell us what happened or what would make learning better."></textarea>
+          <button id="submit-feedback-btn" class="btn secondary">Send feedback</button>
+          <p class="tiny muted">Do not include private information such as your full name, school, address or date of birth.</p>
+        </div>
 
-          <span
-            id="profile-xp-copy"
-            class="muted"
-          >
-            0 total XP
-          </span>
+        <div class="profile-section danger-zone">
+          <p class="eyebrow">ACCOUNT</p>
+          <h2>Account options</h2>
+          <p id="profile-save-description" class="muted">Your progress is stored on this device.</p>
+          <button id="profile-logout-btn" class="btn danger">Log out</button>
         </div>
       </div>
-    </div>
-
-    <div class="profile-stat-grid">
-      <div class="profile-stat-card">
-        <span>🔥</span>
-
-        <strong id="profile-streak-value">
-          0
-        </strong>
-
-        <small>
-          Day streak
-        </small>
-      </div>
-
-      <div class="profile-stat-card">
-        <span>🎯</span>
-
-        <strong id="profile-accuracy-value">
-          0%
-        </strong>
-
-        <small>
-          Accuracy
-        </small>
-      </div>
-
-      <div class="profile-stat-card">
-        <span>📘</span>
-
-        <strong id="profile-lessons-value">
-          0
-        </strong>
-
-        <small>
-          Lessons completed
-        </small>
-      </div>
-
-      <div class="profile-stat-card">
-        <span>🏅</span>
-
-        <strong id="profile-topics-value">
-          0
-        </strong>
-
-        <small>
-          Topics mastered
-        </small>
-      </div>
-    </div>
-
-    <div class="profile-section">
-      <p class="eyebrow">
-        PROFILE DETAILS
-      </p>
-
-      <h2>
-        Display name
-      </h2>
-
-      <p class="muted">
-        Use a nickname rather than your full real name.
-      </p>
-
-      <div class="profile-name-row">
-        <input
-          id="profile-name-input"
-          class="field"
-          type="text"
-          maxlength="24"
-          placeholder="Display nickname"
-        >
-
-        <button
-          id="save-profile-btn"
-          class="btn primary"
-        >
-          Save name
-        </button>
-      </div>
-    </div>
-
-    <div class="profile-section">
-      <p class="eyebrow">
-        LEARNING SETTINGS
-      </p>
-
-      <h2>
-        Personalise your learning
-      </h2>
-
-      <label class="setting-field">
-        <span>
-          Theme
-        </span>
-
-        <select
-          id="theme-select"
-          class="field"
-        >
-          <option value="quest">
-            Quest green
-          </option>
-
-          <option value="ocean">
-            Ocean blue
-          </option>
-
-          <option value="night">
-            Night mode
-          </option>
-
-          <option value="light">
-            Light
-          </option>
-        </select>
-      </label>
-
-      <label class="setting-field">
-        <span>
-          Practice timer
-        </span>
-
-        <select
-          id="timer-select"
-          class="field"
-        >
-          <option value="0">
-            Off
-          </option>
-
-          <option value="60">
-            60 seconds
-          </option>
-
-          <option value="45">
-            45 seconds
-          </option>
-
-          <option value="30">
-            30 seconds
-          </option>
-        </select>
-      </label>
-
-      <label class="toggle-line">
-        <input
-          id="sound-toggle"
-          type="checkbox"
-          checked
-        >
-
-        Sound effects and text-to-speech
-      </label>
-
-      <label class="toggle-line">
-        <input
-          id="reduced-motion-toggle"
-          type="checkbox"
-        >
-
-        Reduce animations
-      </label>
-
-      <button
-        id="save-settings-btn"
-        class="btn primary"
-      >
-        Save settings
-      </button>
-    </div>
-
-    <div class="profile-section danger-zone">
-      <p class="eyebrow">
-        ACCOUNT
-      </p>
-
-      <h2>
-        Account options
-      </h2>
-
-      <p
-        id="profile-save-description"
-        class="muted"
-      >
-        Your progress is stored on this device.
-      </p>
-
-      <button
-        id="profile-logout-btn"
-        class="btn danger"
-      >
-        Log out
-      </button>
-    </div>
-
-    <div class="privacy-note">
-      <strong>
-        Privacy reminder:
-      </strong>
-
-      avoid entering a full real name, date of birth,
-      school name, address or other private information.
-    </div>
-
-  </div>
-</section>
+    </section>
   </main>
 
   <nav class="bottom-nav hidden" id="bottom-nav">
-<nav
-  class="bottom-nav hidden"
-  id="bottom-nav"
->
-  <button data-view="home-view">
-    🏠
-    <span>
-      Learn
-    </span>
-  </button>
-
-  <button data-view="progress-view">
-    📊
-    <span>
-      Progress
-    </span>
-  </button>
-
-  <button data-view="daily-view">
-    📅
-    <span>
-      Daily
-    </span>
-  </button>
-
-  <button data-view="tournament-view">
-    🏆
-    <span>
-      League
-    </span>
-  </button>
-
-  <button data-view="profile-view">
-    👤
-    <span>
-      Profile
-    </span>
-  </button>
-</nav>
+    <button data-view="home-view">🏠<span>Learn</span></button>
+    <button data-view="progress-view">📊<span>Progress</span></button>
+    <button data-view="daily-view">📅<span>Daily</span></button>
+    <button data-view="tournament-view">🏆<span>League</span></button>
+    <button data-view="profile-view">👤<span>Profile</span></button>
+  </nav>
 
   <div id="overlay" class="overlay hidden"><div class="modal panel"><div id="overlay-content"></div><button id="overlay-close" class="btn primary wide">Close</button></div></div>
   <div id="toast" class="toast hidden"></div>
@@ -510,5 +323,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
 
