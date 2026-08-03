@@ -7,79 +7,400 @@ window.STEM_COURSES = {
     description: 'Build confidence with whole numbers and core operations.',
     topics: [
       topic(
-        'addition',
-        'Addition',
-        'Add whole numbers using place value.',
-        '➕',
-        null,
-        [
-          lesson(
-            'addition-basics',
-            'Adding whole numbers',
-            [
-              page(
-                'What addition means',
-                'Addition combines quantities. The symbol + means “add”.',
-                '3 + 2 = 5 because three objects and two objects make five.'
-              ),
-              page(
-                'Use place value',
-                'Line up ones, tens, and hundreds before adding. Work from right to left.',
-                '27 + 18: add 7 + 8 = 15, write 5 and carry 1; then 2 + 1 + 1 = 4, giving 45.'
-              ),
-              page(
-                'Check your answer',
-                'Estimate before calculating. 27 + 18 is close to 30 + 20 = 50, so 45 is sensible.',
-                'Estimation helps catch typing and carrying mistakes.'
-              )
-            ],
-            [
-              num(
-                'add-1',
-                'What is 8 + 7?',
-                15,
-                'Count forward seven from eight.',
-                ['8 + 7 = 15.']
-              ),
-              num(
-                'add-2',
-                'What is 27 + 18?',
-                45,
-                'Add ones, then tens.',
-                [
-                  '7 + 8 = 15.',
-                  'Write 5 and carry 1.',
-                  '2 + 1 + 1 = 4.',
-                  'The answer is 45.'
-                ]
-              ),
-              choice(
-                'add-3',
-                'Which estimate is closest to 49 + 32?',
-                ['60', '80', '100', '120'],
-                1,
-                'Round to nearby tens.',
-                [
-                  '49 ≈ 50 and 32 ≈ 30.',
-                  '50 + 30 = 80.'
-                ]
-              ),
-              num(
-                'add-4',
-                'What is 346 + 129?',
-                475,
-                'Align each place value.',
-                [
-                  '6 + 9 = 15.',
-                  '4 + 2 + 1 carried = 7.',
-                  '3 + 1 = 4.',
-                  'Answer: 475.'
-                ]
-              )
-            ]
-          )
-        ]
-      ),
+  'addition',
+  'Addition',
+  'Add whole numbers using place value and mental strategies.',
+  '➕',
+  null,
+  [
+    lesson(
+      'addition-meaning',
+      'What addition means',
+      [
+        page(
+          'Combining quantities',
+          'Addition combines two or more quantities to find a total.',
+          'If one basket has 3 apples and another has 4 apples, there are 3 + 4 = 7 apples altogether.'
+        ),
+        page(
+          'The addition symbol',
+          'The + symbol tells us to combine quantities. The = symbol shows that two expressions have the same value.',
+          '5 + 2 = 7.'
+        ),
+        page(
+          'Addition on a number line',
+          'Start at the first number and move right by the second number.',
+          'For 6 + 3, start at 6 and move three places right: 7, 8, 9.'
+        )
+      ],
+      [
+        num(
+          'add-meaning-1',
+          'What is 4 + 3?',
+          7,
+          'Start at 4 and count forward three places.',
+          [
+            '4 + 3 = 7.'
+          ]
+        ),
+        num(
+          'add-meaning-2',
+          'What is 9 + 5?',
+          14,
+          'Count five places forward from 9.',
+          [
+            '9 + 5 = 14.'
+          ]
+        ),
+        choice(
+          'add-meaning-3',
+          'Which expression represents six objects combined with four more?',
+          [
+            '6 − 4',
+            '6 + 4',
+            '6 ÷ 4',
+            '6 × 4'
+          ],
+          1,
+          'Combining quantities uses addition.',
+          [
+            '6 + 4 represents the combined total.'
+          ]
+        ),
+        num(
+          'add-meaning-4',
+          'Lina has 7 pencils and receives 2 more. How many pencils does she have?',
+          9,
+          'Combine the original pencils and the new pencils.',
+          [
+            '7 + 2 = 9.'
+          ]
+        ),
+        num(
+          'add-meaning-5',
+          'What is 13 + 6?',
+          19,
+          'Count forward six places.',
+          [
+            '13 + 6 = 19.'
+          ]
+        )
+      ]
+    ),
+
+    lesson(
+      'addition-place-value',
+      'Adding with place value',
+      [
+        page(
+          'Ones, tens and hundreds',
+          'Digits have different values depending on their positions.',
+          'In 243, the 2 represents 200, the 4 represents 40, and the 3 represents 3.'
+        ),
+        page(
+          'Line up place values',
+          'When adding vertically, place ones below ones and tens below tens.',
+          'For 23 + 14, add 3 + 4 and then 2 tens + 1 ten.'
+        ),
+        page(
+          'Add from right to left',
+          'Begin with the smallest place value before moving left.',
+          '23 + 14: 3 + 4 = 7, then 2 + 1 = 3, giving 37.'
+        )
+      ],
+      [
+        num(
+          'add-place-1',
+          'What is 23 + 14?',
+          37,
+          'Add the ones and then the tens.',
+          [
+            '3 + 4 = 7.',
+            '2 tens + 1 ten = 3 tens.',
+            'Answer: 37.'
+          ]
+        ),
+        num(
+          'add-place-2',
+          'What is 42 + 35?',
+          77,
+          'Line up the ones and tens.',
+          [
+            '2 + 5 = 7.',
+            '4 + 3 = 7.',
+            'Answer: 77.'
+          ]
+        ),
+        num(
+          'add-place-3',
+          'What is 126 + 243?',
+          369,
+          'Add ones, tens and hundreds separately.',
+          [
+            '6 + 3 = 9.',
+            '2 + 4 = 6.',
+            '1 + 2 = 3.',
+            'Answer: 369.'
+          ]
+        ),
+        choice(
+          'add-place-4',
+          'Which digits should be added first in 52 + 36?',
+          [
+            '5 and 3',
+            '2 and 6',
+            '5 and 6',
+            '2 and 3'
+          ],
+          1,
+          'Begin with the ones column.',
+          [
+            'The ones digits are 2 and 6.'
+          ]
+        ),
+        num(
+          'add-place-5',
+          'A library has 135 science books and 242 maths books. How many books are there altogether?',
+          377,
+          'Add 135 and 242 by place value.',
+          [
+            '135 + 242 = 377.'
+          ]
+        )
+      ]
+    ),
+
+    lesson(
+      'addition-regrouping',
+      'Regrouping when adding',
+      [
+        page(
+          'When a column reaches ten',
+          'Ten ones can be regrouped as one ten.',
+          '8 + 7 = 15, which is 1 ten and 5 ones.'
+        ),
+        page(
+          'Carry into the next column',
+          'Write the ones digit and carry the new ten into the tens column.',
+          '27 + 18: 7 + 8 = 15. Write 5 and carry 1 ten.'
+        ),
+        page(
+          'Regroup more than once',
+          'Larger calculations may require regrouping in several columns.',
+          '368 + 457 requires regrouping from ones to tens and from tens to hundreds.'
+        )
+      ],
+      [
+        num(
+          'add-regroup-1',
+          'What is 27 + 18?',
+          45,
+          'Regroup 15 ones as 1 ten and 5 ones.',
+          [
+            '7 + 8 = 15.',
+            'Write 5 and carry 1.',
+            '2 + 1 + 1 = 4.',
+            'Answer: 45.'
+          ]
+        ),
+        num(
+          'add-regroup-2',
+          'What is 46 + 37?',
+          83,
+          'Add the ones and regroup.',
+          [
+            '6 + 7 = 13.',
+            'Write 3 and carry 1.',
+            '4 + 3 + 1 = 8.',
+            'Answer: 83.'
+          ]
+        ),
+        num(
+          'add-regroup-3',
+          'What is 158 + 267?',
+          425,
+          'Regroup from ones into tens.',
+          [
+            '8 + 7 = 15.',
+            '5 + 6 + 1 = 12.',
+            '1 + 2 + 1 = 4.',
+            'Answer: 425.'
+          ]
+        ),
+        num(
+          'add-regroup-4',
+          'What is 368 + 457?',
+          825,
+          'Regroup in both the ones and tens columns.',
+          [
+            '368 + 457 = 825.'
+          ]
+        ),
+        num(
+          'add-regroup-5',
+          'A charity collected 286 cans on Monday and 175 on Tuesday. How many cans were collected?',
+          461,
+          'Add the two daily totals.',
+          [
+            '286 + 175 = 461.'
+          ]
+        )
+      ]
+    ),
+
+    lesson(
+      'addition-mental',
+      'Mental addition strategies',
+      [
+        page(
+          'Make ten',
+          'Break apart a number so the first number reaches the next ten.',
+          '8 + 7 = 8 + 2 + 5 = 15.'
+        ),
+        page(
+          'Add tens and ones separately',
+          'Split numbers into place-value parts.',
+          '34 + 25 = 30 + 20 + 4 + 5 = 59.'
+        ),
+        page(
+          'Compensation',
+          'Round a number, calculate, then adjust.',
+          '49 + 26 = 50 + 26 − 1 = 75.'
+        )
+      ],
+      [
+        num(
+          'add-mental-1',
+          'Use make-ten thinking to calculate 8 + 6.',
+          14,
+          'Move 2 from 6 to make 10 with 8.',
+          [
+            '8 + 2 + 4 = 14.'
+          ]
+        ),
+        num(
+          'add-mental-2',
+          'What is 34 + 25?',
+          59,
+          'Add the tens and ones separately.',
+          [
+            '30 + 20 = 50.',
+            '4 + 5 = 9.',
+            '50 + 9 = 59.'
+          ]
+        ),
+        num(
+          'add-mental-3',
+          'What is 49 + 26?',
+          75,
+          'Round 49 to 50 and subtract 1 afterwards.',
+          [
+            '50 + 26 − 1 = 75.'
+          ]
+        ),
+        num(
+          'add-mental-4',
+          'What is 198 + 35?',
+          233,
+          'Round 198 to 200, then compensate.',
+          [
+            '200 + 35 − 2 = 233.'
+          ]
+        ),
+        choice(
+          'add-mental-5',
+          'Which strategy makes 99 + 48 easiest?',
+          [
+            '100 + 48 − 1',
+            '90 + 40 − 8',
+            '99 − 48',
+            '100 + 48 + 1'
+          ],
+          0,
+          'Round 99 to 100 and compensate.',
+          [
+            '100 + 48 − 1 = 147.'
+          ]
+        )
+      ]
+    ),
+
+    lesson(
+      'addition-word-problems',
+      'Addition word problems',
+      [
+        page(
+          'Identify the quantities',
+          'Read carefully and find which amounts are being combined.',
+          'A class has 14 students and 12 more arrive. The quantities are 14 and 12.'
+        ),
+        page(
+          'Choose the operation',
+          'Words such as total, altogether and combined often indicate addition.',
+          '14 + 12 finds the total number of students.'
+        ),
+        page(
+          'Check the answer in context',
+          'Ask whether your result makes sense for the situation.',
+          'If two positive groups are combined, the total should be larger than either group.'
+        )
+      ],
+      [
+        num(
+          'add-word-1',
+          'A bus has 18 passengers. Seven more board. How many passengers are now on the bus?',
+          25,
+          'Combine the original passengers and the new passengers.',
+          [
+            '18 + 7 = 25.'
+          ]
+        ),
+        num(
+          'add-word-2',
+          'A student reads 26 pages on Monday and 34 pages on Tuesday. How many pages were read altogether?',
+          60,
+          'Add both daily amounts.',
+          [
+            '26 + 34 = 60.'
+          ]
+        ),
+        num(
+          'add-word-3',
+          'A science club has 47 batteries and receives 28 more. How many batteries does it have?',
+          75,
+          'The batteries are being combined.',
+          [
+            '47 + 28 = 75.'
+          ]
+        ),
+        num(
+          'add-word-4',
+          'A game awards 125 points in one level and 240 in another. Find the total.',
+          365,
+          'Add both scores.',
+          [
+            '125 + 240 = 365.'
+          ]
+        ),
+        choice(
+          'add-word-5',
+          'Which operation should be used to find a combined total?',
+          [
+            'Addition',
+            'Subtraction',
+            'Division',
+            'Square root'
+          ],
+          0,
+          'A combined total generally uses addition.',
+          [
+            'Addition combines quantities.'
+          ]
+        )
+      ]
+    )
+  ]
+),
 
       topic(
         'subtraction',
