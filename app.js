@@ -253,28 +253,9 @@ $('local-login-btn').onclick = () => {
   enterApp();
 };
 
-$('logout-btn').onclick = async () => {
-  if (firebaseUser && auth) {
-    await signOut(auth);
-  }
 
-  firebaseUser = null;
-  localMode = false;
-  player = structuredClone(DEFAULT_PLAYER);
-
-  $('bottom-nav').classList.add('hidden');
-  $('logout-btn').classList.add('hidden');
-
-  showView('auth-view');
-  syncUI();
-};
 
 function enterApp() {
-  $('logout-btn').classList.toggle(
-    'hidden',
-    !firebaseUser
-  );
-
   $('bottom-nav').classList.remove('hidden');
 
   applySettings();
@@ -292,6 +273,32 @@ function showView(id) {
       view.id === id
     );
   });
+
+  document
+    .querySelectorAll('[data-view]')
+    .forEach(button => {
+      button.classList.toggle(
+        'active',
+        button.dataset.view === id
+      );
+    });
+  if (id === 'home-view') {
+    renderHome();
+  }
+  if (id === 'progress-view') {
+    renderProgress();
+  }
+  if (id === 'daily-view') {
+    renderDaily();
+  }
+  if (id === 'tournament-view') {
+    renderTournament();
+  }
+  if (id === 'profile-view') {
+    renderProfile();
+  }
+  window.scrollTo(0, 0);
+}
 
   document
     .querySelectorAll('[data-view]')
@@ -2159,6 +2166,196 @@ $('save-settings-btn').onclick = () => {
   toast('Settings saved.');
 };
 
+function calculateOverallAccuracy() {
+  const attempts =
+    Object.values(player.attempts || {});
+
+  const totalAnswers =
+    attempts.reduce((total, attempt) => {
+      return total + Number(
+        attempt.total || 0
+      );
+    }, 0);
+
+  const correctAnswers =
+    attempts.reduce((total, attempt) => {
+      return total + Number(
+        attempt.correct || 0
+      );
+    }, 0);
+
+  if (totalAnswers === 0) {
+    return 0;
+  }
+
+  return Math.round(
+    (
+      correctAnswers /
+      totalAnswers
+    ) * 100
+  );
+}
+
+function renderProfile() {
+  updateLevel();
+
+  const accountType =
+    firebaseUser
+      ? 'Google account · Cloud saving enabled'
+      : 'Local account · Saved on this device';
+
+  $('profile-display-name').textContent =
+    player.name || 'Learner';
+
+  $('profile-account-type').textContent =
+    accountType;
+
+  $('profile-level-badge').textContent =
+    `Level ${player.level}`;
+
+  $('profile-xp-copy').textContent =
+    `${player.xp || 0} total XP`;
+
+  $('profile-streak-value').textContent =
+    player.streak || 0;
+
+  $('profile-accuracy-value').textContent =
+    `${calculateOverallAccuracy()}%`;
+
+  $('profile-lessons-value').textContent =
+    player.completedLessons?.length || 0;
+
+  $('profile-topics-value').textContent =
+    player.completedTopics?.length || 0;
+
+  $('profile-name-input').value =
+    player.name || '';
+
+  $('profile-save-description').textContent =
+    firebaseUser
+      ? 'Your progress is synced through your Google account.'
+      : 'Your progress is saved only in this browser on this device.';
+
+  applySettings();
+}
+
+$('save-profile-btn').onclick = async () => {
+  const newName =
+    $('profile-name-input').value.trim();
+
+  if (!newName) {
+    toast('Enter a display name first.');
+    return;
+  }
+
+  if (newName.length < 2) {
+    toast(
+      'Your display name must contain at least two characters.'
+    );
+
+    return;
+  }
+
+  player.name = newName;
+
+  await savePlayer();
+
+  renderProfile();
+  renderHome();
+
+  toast('Profile name saved.');
+};
+
+$('profile-logout-btn').onclick = () => {
+  showLogoutConfirmation();
+};
+
+function showLogoutConfirmation() {
+  const cloudMessage =
+    firebaseUser
+      ? 'Your cloud progress has been saved and will be available when you sign in again.'
+      : 'Your local progress will remain saved in this browser on this device.';
+
+  modal(`
+    <div class="logout-confirmation">
+      <div class="confirmation-icon">
+        👋
+      </div>
+
+      <p class="eyebrow">
+        LOG OUT
+      </p>
+
+      <h2>
+        Are you sure you want to log out?
+      </h2>
+
+      <p class="muted">
+        ${escapeHtml(cloudMessage)}
+      </p>
+
+      <div class="confirmation-actions">
+        <button
+          id="cancel-logout-btn"
+          class="btn secondary"
+        >
+          Stay signed in
+        </button>
+
+        <button
+          id="confirm-logout-btn"
+          class="btn danger"
+        >
+          Yes, log out
+        </button>
+      </div>
+    </div>
+  `);
+
+  $('overlay-close').classList.add('hidden');
+
+  $('cancel-logout-btn').onclick = () => {
+    closeAppModal();
+  };
+
+  $('confirm-logout-btn').onclick =
+    async () => {
+      await performLogout();
+    };
+}
+
+function closeAppModal() {
+  $('overlay').classList.add('hidden');
+  $('overlay-close').classList.remove('hidden');
+}
+
+async function performLogout() {
+  try {
+    await savePlayer();
+
+    if (firebaseUser && auth) {
+      await signOut(auth);
+    }
+    firebaseUser = null;
+    localMode = false;
+    player =
+      structuredClone(DEFAULT_PLAYER);
+    clearInterval(session.timer);
+    $('bottom-nav').classList.add('hidden');
+    closeAppModal();
+    $('nickname-input').value = '';
+    showView('auth-view');
+    syncUI();
+    toast('You have been logged out.');
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      'Logout failed. Please try again.'
+    );
+  }
+}
+
 $('theme-select').onchange = () => {
   player.settings.theme =
     $('theme-select').value;
@@ -2515,9 +2712,7 @@ function modal(html) {
 }
 
 $('overlay-close').onclick = () => {
-  $('overlay').classList.add(
-    'hidden'
-  );
+  closeAppModal();
 };
 
 function toast(message) {
