@@ -209,25 +209,299 @@
     </section>
 
     <section id="settings-view" class="view">
-      <div class="panel content-panel settings-stack">
-        <p class="eyebrow">SETTINGS</p><h1>Personalise your learning</h1>
-        <label>Theme<select id="theme-select" class="field"><option value="quest">Quest green</option><option value="ocean">Ocean blue</option><option value="night">Night mode</option><option value="light">Light</option></select></label>
-        <label>Practice timer<select id="timer-select" class="field"><option value="0">Off</option><option value="60">60 seconds</option><option value="45">45 seconds</option><option value="30">30 seconds</option></select></label>
-        <label class="toggle-line"><input id="sound-toggle" type="checkbox" checked> Sound effects and text-to-speech</label>
-        <label class="toggle-line"><input id="reduced-motion-toggle" type="checkbox"> Reduce animations</label>
-        <button id="save-settings-btn" class="btn primary">Save settings</button>
-        <div class="privacy-note"><strong>Privacy reminder:</strong> avoid collecting real names, dates of birth, school names, or other sensitive student information.</div>
+<section id="profile-view" class="view">
+  <div class="panel content-panel profile-page">
+
+    <div class="profile-header-card">
+      <div
+        id="profile-avatar"
+        class="large-profile-avatar"
+      >
+        🎓
       </div>
-    </section>
+
+      <div class="profile-header-copy">
+        <p class="eyebrow">
+          YOUR PROFILE
+        </p>
+
+        <h1 id="profile-display-name">
+          Learner
+        </h1>
+
+        <p
+          id="profile-account-type"
+          class="muted"
+        >
+          Local account
+        </p>
+
+        <div class="profile-level-row">
+          <span
+            id="profile-level-badge"
+            class="badge"
+          >
+            Level 1
+          </span>
+
+          <span
+            id="profile-xp-copy"
+            class="muted"
+          >
+            0 total XP
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-stat-grid">
+      <div class="profile-stat-card">
+        <span>🔥</span>
+
+        <strong id="profile-streak-value">
+          0
+        </strong>
+
+        <small>
+          Day streak
+        </small>
+      </div>
+
+      <div class="profile-stat-card">
+        <span>🎯</span>
+
+        <strong id="profile-accuracy-value">
+          0%
+        </strong>
+
+        <small>
+          Accuracy
+        </small>
+      </div>
+
+      <div class="profile-stat-card">
+        <span>📘</span>
+
+        <strong id="profile-lessons-value">
+          0
+        </strong>
+
+        <small>
+          Lessons completed
+        </small>
+      </div>
+
+      <div class="profile-stat-card">
+        <span>🏅</span>
+
+        <strong id="profile-topics-value">
+          0
+        </strong>
+
+        <small>
+          Topics mastered
+        </small>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <p class="eyebrow">
+        PROFILE DETAILS
+      </p>
+
+      <h2>
+        Display name
+      </h2>
+
+      <p class="muted">
+        Use a nickname rather than your full real name.
+      </p>
+
+      <div class="profile-name-row">
+        <input
+          id="profile-name-input"
+          class="field"
+          type="text"
+          maxlength="24"
+          placeholder="Display nickname"
+        >
+
+        <button
+          id="save-profile-btn"
+          class="btn primary"
+        >
+          Save name
+        </button>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <p class="eyebrow">
+        LEARNING SETTINGS
+      </p>
+
+      <h2>
+        Personalise your learning
+      </h2>
+
+      <label class="setting-field">
+        <span>
+          Theme
+        </span>
+
+        <select
+          id="theme-select"
+          class="field"
+        >
+          <option value="quest">
+            Quest green
+          </option>
+
+          <option value="ocean">
+            Ocean blue
+          </option>
+
+          <option value="night">
+            Night mode
+          </option>
+
+          <option value="light">
+            Light
+          </option>
+        </select>
+      </label>
+
+      <label class="setting-field">
+        <span>
+          Practice timer
+        </span>
+
+        <select
+          id="timer-select"
+          class="field"
+        >
+          <option value="0">
+            Off
+          </option>
+
+          <option value="60">
+            60 seconds
+          </option>
+
+          <option value="45">
+            45 seconds
+          </option>
+
+          <option value="30">
+            30 seconds
+          </option>
+        </select>
+      </label>
+
+      <label class="toggle-line">
+        <input
+          id="sound-toggle"
+          type="checkbox"
+          checked
+        >
+
+        Sound effects and text-to-speech
+      </label>
+
+      <label class="toggle-line">
+        <input
+          id="reduced-motion-toggle"
+          type="checkbox"
+        >
+
+        Reduce animations
+      </label>
+
+      <button
+        id="save-settings-btn"
+        class="btn primary"
+      >
+        Save settings
+      </button>
+    </div>
+
+    <div class="profile-section danger-zone">
+      <p class="eyebrow">
+        ACCOUNT
+      </p>
+
+      <h2>
+        Account options
+      </h2>
+
+      <p
+        id="profile-save-description"
+        class="muted"
+      >
+        Your progress is stored on this device.
+      </p>
+
+      <button
+        id="profile-logout-btn"
+        class="btn danger"
+      >
+        Log out
+      </button>
+    </div>
+
+    <div class="privacy-note">
+      <strong>
+        Privacy reminder:
+      </strong>
+
+      avoid entering a full real name, date of birth,
+      school name, address or other private information.
+    </div>
+
+  </div>
+</section>
   </main>
 
   <nav class="bottom-nav hidden" id="bottom-nav">
-    <button data-view="home-view">🏠<span>Learn</span></button>
-    <button data-view="progress-view">📊<span>Progress</span></button>
-    <button data-view="daily-view">📅<span>Daily</span></button>
-    <button data-view="tournament-view">🏆<span>League</span></button>
-    <button data-view="settings-view">⚙️<span>Settings</span></button>
-  </nav>
+<nav
+  class="bottom-nav hidden"
+  id="bottom-nav"
+>
+  <button data-view="home-view">
+    🏠
+    <span>
+      Learn
+    </span>
+  </button>
+
+  <button data-view="progress-view">
+    📊
+    <span>
+      Progress
+    </span>
+  </button>
+
+  <button data-view="daily-view">
+    📅
+    <span>
+      Daily
+    </span>
+  </button>
+
+  <button data-view="tournament-view">
+    🏆
+    <span>
+      League
+    </span>
+  </button>
+
+  <button data-view="profile-view">
+    👤
+    <span>
+      Profile
+    </span>
+  </button>
+</nav>
 
   <div id="overlay" class="overlay hidden"><div class="modal panel"><div id="overlay-content"></div><button id="overlay-close" class="btn primary wide">Close</button></div></div>
   <div id="toast" class="toast hidden"></div>
