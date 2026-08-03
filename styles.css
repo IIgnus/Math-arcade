@@ -37,3 +37,7 @@ body.theme-light{--bg:#fff;--panel:#fff;--panel-soft:#f7f7f7}
   .unlock-grid{grid-template-columns:1fr}.calculator-head{align-items:flex-start;flex-direction:column}
   .graph-input-row{grid-template-columns:auto 1fr}.graph-input-row button{grid-column:1/-1}
 }
+
+/* Content loader and validation status */
+.content-ok{border-color:var(--primary);background:rgba(88,204,2,.08)}
+.content-error{border-color:var(--danger);background:rgba(248,113,113,.08)}
