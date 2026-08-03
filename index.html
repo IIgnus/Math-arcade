@@ -21,7 +21,7 @@
       };
 
       // Check if keys are modified before spinning up live web sockets
-      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      if (true) {
          const app = initializeApp(firebaseConfig);
          window.db = getFirestore(app);
          window.auth = getAuth(app);
