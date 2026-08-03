@@ -2,7 +2,7 @@ import {
   validateContent
 } from './content-validator.js';
 
-export function loadStemContent(rawContent) {
+export function loadContent(rawContent) {
   const report = validateContent(rawContent);
 
   if (!report.valid) {
@@ -49,27 +49,25 @@ export function formatContentReport(report) {
     };
   }
 
-  const {
-    counts = {},
-    errors = [],
-    warnings = []
-  } = report;
-
-  const summary = [
-    `${counts.courses || 0} courses`,
-    `${counts.topics || 0} topics`,
-    `${counts.lessons || 0} lessons`,
-    `${counts.questions || 0} questions`,
-    `${errors.length} errors`,
-    `${warnings.length} warnings`
-  ].join(' · ');
+  const counts = report.counts || {};
+  const errors = report.errors || [];
+  const warnings = report.warnings || [];
 
   return {
-    summary,
-    status: errors.length > 0
-      ? 'error'
-      : warnings.length > 0
-        ? 'warning'
-        : 'healthy'
+    summary: [
+      `${counts.courses || 0} courses`,
+      `${counts.topics || 0} topics`,
+      `${counts.lessons || 0} lessons`,
+      `${counts.questions || 0} questions`,
+      `${errors.length} errors`,
+      `${warnings.length} warnings`
+    ].join(' · '),
+
+    status:
+      errors.length > 0
+        ? 'error'
+        : warnings.length > 0
+          ? 'warning'
+          : 'healthy'
   };
 }
