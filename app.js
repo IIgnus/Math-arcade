@@ -17,6 +17,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  addDoc,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
@@ -48,7 +49,10 @@ const DEFAULT_PLAYER = {
   attempts: {},
   mistakes: [],
   completedLessons: [],
+  lessonStars: {},
+  lessonBestScores: {},
   completedTopics: [],
+  courseRewards: {},
   unlockedTopics: {},
   achievements: [],
   placementCompleted: false,
@@ -118,7 +122,10 @@ function mergePlayer(raw = {}) {
   merged.attempts ||= {};
   merged.mistakes ||= [];
   merged.completedLessons ||= [];
+  merged.lessonStars ||= {};
+  merged.lessonBestScores ||= {};
   merged.completedTopics ||= [];
+  merged.courseRewards ||= {};
   merged.unlockedTopics ||= {};
   merged.achievements ||= [];
 
@@ -300,13 +307,6 @@ function showView(id) {
   window.scrollTo(0, 0);
 }
 
-document
-  .querySelectorAll('[data-view]')
-  .forEach(element => {
-    element.onclick = () => {
-      showView(element.dataset.view);
-    };
-  });
 
 document
   .querySelectorAll('[data-view]')
@@ -656,163 +656,95 @@ function allQuestions() {
 }
 
 function renderTopic() {
-  const topic =
-    findTopic(selectedTopicId);
-
-  const course =
-    findCourseForTopic(topic.id);
-
-  const mastery =
-    getTopicMastery(topic.id);
+  const topic = findTopic(selectedTopicId);
+  const course = findCourseForTopic(topic.id);
+  const mastery = getTopicMastery(topic.id);
+  const allLessonsComplete = topic.lessons.every(lesson =>
+    player.completedLessons.includes(lesson.id)
+  );
 
   $('topic-header').innerHTML = `
-    <p class="eyebrow">
-      ${escapeHtml(course.title)}
-    </p>
-
-    <h1>
-      ${topic.icon}
-      ${escapeHtml(topic.title)}
-    </h1>
-
-    <p class="muted">
-      ${escapeHtml(topic.description)}
-    </p>
-
-    <div class="mini-progress">
-      <div style="width:${mastery}%"></div>
-    </div>
-
-    <p>
-      <strong>
-        ${mastery}% mastery
-      </strong>
-    </p>
+    <p class="eyebrow">${escapeHtml(course.title)}</p>
+    <h1>${topic.icon} ${escapeHtml(topic.title)}</h1>
+    <p class="muted">${escapeHtml(topic.description)}</p>
+    <div class="mini-progress"><div style="width:${mastery}%"></div></div>
+    <p><strong>${mastery}% mastery</strong></p>
   `;
 
   $('lesson-cards').innerHTML =
-    topic.lessons
-      .map((lesson, index) => {
-        const complete =
-          player.completedLessons.includes(
-            lesson.id
-          );
+    topic.lessons.map((lesson, index) => {
+      const complete = player.completedLessons.includes(lesson.id);
+      const unlocked = isLessonUnlocked(topic, index);
+      const stars = player.lessonStars[lesson.id] || 0;
+      const starText = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
 
-        return `
-          <div class="lesson-card">
-            <div class="lesson-icon">
-              ${complete ? '✅' : '📘'}
-            </div>
-
-            <div class="grow">
-              <p class="eyebrow">
-                LESSON ${index + 1}
-              </p>
-
-              <h3>
-                ${escapeHtml(lesson.title)}
-              </h3>
-
-              <p class="muted">
-                ${lesson.pages.length}
-                learning cards ·
-                ${lesson.questions.length}
-                practice questions
-              </p>
-            </div>
-
-            <button
-              class="btn ${
-                complete
-                  ? 'secondary'
-                  : 'primary'
-              }"
-              data-open-lesson="${lesson.id}"
-            >
-              ${complete ? 'Review' : 'Learn'}
-            </button>
-
-            <button
-              class="btn secondary"
-              data-practice-lesson="${lesson.id}"
-            >
-              Practice
-            </button>
+      return `
+        <div class="lesson-card ${unlocked ? '' : 'lesson-locked'}">
+          <div class="lesson-icon">${unlocked ? (complete ? '✅' : '📘') : '🔒'}</div>
+          <div class="grow">
+            <p class="eyebrow">LESSON ${index + 1}</p>
+            <h3>${escapeHtml(lesson.title)}</h3>
+            <p class="muted">${lesson.pages.length} learning cards · ${lesson.questions.length} practice questions</p>
+            <div class="lesson-stars" aria-label="${stars} out of 3 stars">${starText}</div>
           </div>
-        `;
-      })
-      .join('') +
+          <button class="btn ${complete ? 'secondary' : 'primary'}"
+            data-open-lesson="${lesson.id}" ${unlocked ? '' : 'disabled'}>
+            ${unlocked ? (complete ? 'Review' : 'Learn') : 'Locked'}
+          </button>
+          <button class="btn secondary"
+            data-practice-lesson="${lesson.id}" ${unlocked ? '' : 'disabled'}>
+            Practice
+          </button>
+        </div>
+      `;
+    }).join('') +
     `
-      <div class="lesson-card">
-        <div class="lesson-icon">
-          🏁
-        </div>
-
+      <div class="lesson-card ${allLessonsComplete ? '' : 'lesson-locked'}">
+        <div class="lesson-icon">${allLessonsComplete ? '🏁' : '🔒'}</div>
         <div class="grow">
-          <p class="eyebrow">
-            TOPIC CHECK
-          </p>
-
-          <h3>
-            ${escapeHtml(topic.title)}
-            mastery test
-          </h3>
-
-          <p class="muted">
-            Complete a timed mixed check
-            to strengthen mastery.
-          </p>
+          <p class="eyebrow">TOPIC CHECK</p>
+          <h3>${escapeHtml(topic.title)} mastery test</h3>
+          <p class="muted">${
+            allLessonsComplete
+              ? 'Score 70% or higher to strengthen mastery.'
+              : 'Complete every lesson in this topic to unlock the mastery test.'
+          }</p>
         </div>
-
-        <button
-          class="btn primary"
-          id="topic-test-btn"
-        >
-          Start test
+        <button class="btn primary" id="topic-test-btn" ${allLessonsComplete ? '' : 'disabled'}>
+          ${allLessonsComplete ? 'Start test' : 'Locked'}
         </button>
       </div>
     `;
 
-  document
-    .querySelectorAll('[data-open-lesson]')
-    .forEach(button => {
-      button.onclick = () => {
-        openLesson(
-          button.dataset.openLesson
-        );
-      };
-    });
+  document.querySelectorAll('[data-open-lesson]').forEach(button => {
+    button.onclick = () => openLesson(button.dataset.openLesson);
+  });
 
-  document
-    .querySelectorAll(
-      '[data-practice-lesson]'
-    )
-    .forEach(button => {
-      button.onclick = () => {
-        startLessonPractice(
-          button.dataset.practiceLesson
-        );
-      };
-    });
+  document.querySelectorAll('[data-practice-lesson]').forEach(button => {
+    button.onclick = () => startLessonPractice(button.dataset.practiceLesson);
+  });
 
   $('topic-test-btn').onclick = () => {
-    const questions =
-      getTopicQuestions(topic);
+    if (!allLessonsComplete) {
+      toast('Complete every lesson in this topic first.');
+      return;
+    }
 
+    const questions = getTopicQuestions(topic);
     startSession({
       mode: 'test',
       topicId: topic.id,
-      questions: seededShuffle(
-        questions,
-        Date.now()
-      ).slice(
-        0,
-        Math.min(8, questions.length)
-      ),
+      questions: seededShuffle(questions, Date.now()).slice(0, Math.min(10, questions.length)),
       timer: 45
     });
   };
 }
+
+function isLessonUnlocked(topic, index) {
+  if (index === 0 || player.placementCompleted) return true;
+  return player.completedLessons.includes(topic.lessons[index - 1].id);
+}
+
 
 function openLesson(id) {
   selectedLessonId = id;
@@ -1031,15 +963,17 @@ function renderQuestion() {
     'hidden'
   );
 
-  $('calculator-status').textContent =
-    question.calculatorAllowed
-      ? '🧮 Calculator allowed'
-      : '🚫 No calculator';
+  const allowedMode = allowedCalculatorMode(question);
+  const modeLabels = {
+    none: '🚫 No calculator',
+    basic: '🧮 Basic calculator',
+    scientific: '🧪 Scientific calculator',
+    graphing: '📈 Graphing calculator'
+  };
 
-  $('calculator-btn').classList.toggle(
-    'hidden',
-    !question.calculatorAllowed
-  );
+  $('calculator-status').textContent = modeLabels[allowedMode];
+  $('calculator-btn').classList.toggle('hidden', allowedMode === 'none');
+  configureCalculatorForQuestion(question);
 
   renderAnswer(question);
 
@@ -1460,6 +1394,28 @@ function getTopicMastery(id) {
   );
 }
 
+function calculatorUnlocks() {
+  return {
+    basic: true,
+    scientific: getTopicMastery('division') >= 70 || player.placementCompleted,
+    graphing: getTopicMastery('expanding') >= 70 || player.placementCompleted
+  };
+}
+
+function calculatorModeRank(mode) {
+  return { none: 0, basic: 1, scientific: 2, graphing: 3 }[mode] || 0;
+}
+
+function allowedCalculatorMode(question) {
+  const requested = question.calculatorMode || (question.calculatorAllowed ? 'basic' : 'none');
+  const unlocked = calculatorUnlocks();
+
+  if (requested === 'graphing' && unlocked.graphing) return 'graphing';
+  if (calculatorModeRank(requested) >= 2 && unlocked.scientific) return 'scientific';
+  return question.calculatorAllowed ? 'basic' : 'none';
+}
+
+
 $('next-btn').onclick = () => {
   if (
     session.hearts === 0 &&
@@ -1625,16 +1581,58 @@ function finishSession() {
   }
 
   if (session.mode === 'tournament') {
-    submitTournamentScore(
+    submitTournamentScore(score, time);
+  }
+
+  if (session.config.lessonId) {
+    const lessonId = session.config.lessonId;
+    const stars =
+      score === 100 && session.hearts === 5 ? 3 :
+      score >= 80 ? 2 :
+      score >= 60 ? 1 : 0;
+
+    player.lessonBestScores[lessonId] = Math.max(
       score,
-      time
+      player.lessonBestScores[lessonId] || 0
+    );
+    player.lessonStars[lessonId] = Math.max(
+      stars,
+      player.lessonStars[lessonId] || 0
     );
   }
 
+  checkCourseCompletionRewards();
   addDailyActivity();
   savePlayer();
 
   showView('result-view');
+}
+
+
+function checkCourseCompletionRewards() {
+  for (const course of Object.values(COURSES)) {
+    const complete = course.topics.every(topic => getTopicMastery(topic.id) >= 80);
+    if (!complete || player.courseRewards[course.id]) continue;
+
+    player.courseRewards[course.id] = true;
+    player.xp += 250;
+    player.points += 250;
+
+    setTimeout(() => {
+      modal(`
+        <div class="course-complete">
+          <div class="confirmation-icon">🎓</div>
+          <p class="eyebrow">COURSE COMPLETE</p>
+          <h2>${escapeHtml(course.title)} mastered!</h2>
+          <p>You reached at least 80% mastery in every topic.</p>
+          <div class="reward-row">
+            <span class="reward-chip">⚡ +250 XP</span>
+            <span class="reward-chip">🏅 Course badge unlocked</span>
+          </div>
+        </div>
+      `);
+    }, 350);
+  }
 }
 
 $('retry-btn').onclick = () => {
@@ -1902,11 +1900,20 @@ function achievementDefinitions() {
     {
       icon: '🧹',
       title: 'Mistake Cleaner',
-      description:
-        'Clear all saved mistakes after making progress.',
-      unlocked:
-        player.completedLessons.length > 0 &&
-        player.mistakes.length === 0
+      description: 'Clear all saved mistakes after making progress.',
+      unlocked: player.completedLessons.length > 0 && player.mistakes.length === 0
+    },
+    {
+      icon: '⭐',
+      title: 'Perfect Lesson',
+      description: 'Earn three stars in a lesson.',
+      unlocked: Object.values(player.lessonStars || {}).some(stars => stars === 3)
+    },
+    {
+      icon: '🎓',
+      title: 'Course Graduate',
+      description: 'Master every topic in a course.',
+      unlocked: Object.keys(player.courseRewards || {}).length > 0
     }
   ];
 }
@@ -2216,6 +2223,18 @@ function renderProfile() {
       ? 'Your progress is synced through your Google account.'
       : 'Your progress is saved only in this browser on this device.';
 
+  const unlocks = calculatorUnlocks();
+  $('calculator-unlocks').innerHTML = [
+    ['Basic', true, 'Available on approved arithmetic questions'],
+    ['Scientific', unlocks.scientific, 'Unlock at 70% Division mastery'],
+    ['Graphing', unlocks.graphing, 'Unlock at 70% Expanding brackets mastery']
+  ].map(([name, unlocked, description]) => `
+    <div class="unlock-card ${unlocked ? 'unlocked' : 'locked'}">
+      <strong>${unlocked ? '✅' : '🔒'} ${name}</strong>
+      <small>${escapeHtml(description)}</small>
+    </div>
+  `).join('');
+
   applySettings();
 }
 
@@ -2335,6 +2354,46 @@ async function performLogout() {
     );
   }
 }
+
+
+$('submit-feedback-btn').onclick = async () => {
+  const category = $('feedback-category').value;
+  const message = $('feedback-message').value.trim();
+
+  if (message.length < 10) {
+    toast('Please add a little more detail before sending.');
+    return;
+  }
+
+  const report = {
+    category,
+    message,
+    userId: firebaseUser?.uid || null,
+    displayName: player.name || 'Learner',
+    questionId: session.questions?.[session.index]?.id || null,
+    page: document.querySelector('.view.active')?.id || 'unknown',
+    createdAtLocal: Date.now()
+  };
+
+  try {
+    if (firebaseUser && db) {
+      await addDoc(collection(db, 'feedback'), {
+        ...report,
+        createdAt: serverTimestamp()
+      });
+    } else {
+      const localReports = JSON.parse(localStorage.getItem('stemQuestFeedback') || '[]');
+      localReports.push(report);
+      localStorage.setItem('stemQuestFeedback', JSON.stringify(localReports.slice(-50)));
+    }
+
+    $('feedback-message').value = '';
+    toast(firebaseUser ? 'Feedback sent. Thank you!' : 'Feedback saved on this device.');
+  } catch (error) {
+    console.error(error);
+    toast('Feedback could not be sent. Please try again.');
+  }
+};
 
 $('theme-select').onchange = () => {
   player.settings.theme =
@@ -2580,55 +2639,94 @@ document
 
 redraw();
 
-const calculatorKeys = [
-  '7',
-  '8',
-  '9',
-  '÷',
-  '4',
-  '5',
-  '6',
-  '×',
-  '1',
-  '2',
-  '3',
-  '−',
-  '0',
-  '.',
-  'C',
-  '+',
-  '=',
-  '(',
-  ')',
-  '√',
-  '⌫'
+const basicCalculatorKeys = [
+  '7','8','9','÷',
+  '4','5','6','×',
+  '1','2','3','−',
+  '0','.','(',')',
+  'C','⌫','=','+'
 ];
 
-calculatorKeys.forEach(key => {
-  const button =
-    document.createElement('button');
+const scientificCalculatorKeys = [
+  'sin(','cos(','tan(','√(',
+  'log(','ln(','π','e',
+  '7','8','9','÷',
+  '4','5','6','×',
+  '1','2','3','−',
+  '0','.','^','+',
+  '(',')','C','⌫','='
+];
 
-  button.className =
-    'btn secondary';
+let activeCalculatorMode = 'basic';
 
-  button.textContent = key;
+function buildCalculatorGrid(containerId, keys, displayId) {
+  const container = $(containerId);
+  container.innerHTML = '';
 
+  keys.forEach(key => {
+    const button = document.createElement('button');
+    button.className = 'btn secondary';
+    button.textContent = key;
+    button.onclick = () => calculatorPress(key, displayId);
+    container.appendChild(button);
+  });
+}
+
+buildCalculatorGrid('calc-grid', basicCalculatorKeys, 'calc-display');
+buildCalculatorGrid('scientific-grid', scientificCalculatorKeys, 'scientific-display');
+
+function configureCalculatorForQuestion(question) {
+  const mode = allowedCalculatorMode(question);
+  const unlocks = calculatorUnlocks();
+
+  document.querySelectorAll('[data-calc-mode]').forEach(button => {
+    const buttonMode = button.dataset.calcMode;
+    const unlocked =
+      buttonMode === 'basic' ||
+      (buttonMode === 'scientific' && unlocks.scientific) ||
+      (buttonMode === 'graphing' && unlocks.graphing);
+
+    const permitted = calculatorModeRank(buttonMode) <= calculatorModeRank(mode);
+    button.disabled = !unlocked || !permitted;
+    button.textContent =
+      buttonMode === 'basic' ? 'Basic' :
+      buttonMode === 'scientific' ? `Scientific ${unlocked ? '' : '🔒'}` :
+      `Graphing ${unlocked ? '' : '🔒'}`;
+  });
+
+  switchCalculatorMode(mode === 'none' ? 'basic' : mode);
+  $('calculator-title').textContent =
+    mode === 'graphing' ? 'Graphing calculator' :
+    mode === 'scientific' ? 'Scientific calculator' :
+    'Basic calculator';
+  $('calculator-unlock-note').textContent =
+    mode === 'graphing' ? 'Graphing mode allowed' :
+    mode === 'scientific' ? 'Scientific mode allowed' :
+    'Basic mode allowed';
+}
+
+document.querySelectorAll('[data-calc-mode]').forEach(button => {
   button.onclick = () => {
-    calculatorPress(key);
+    if (button.disabled) return;
+    switchCalculatorMode(button.dataset.calcMode);
   };
-
-  $('calc-grid').appendChild(button);
 });
 
+function switchCalculatorMode(mode) {
+  activeCalculatorMode = mode;
+  document.querySelectorAll('[data-calc-mode]').forEach(button => {
+    button.classList.toggle('active', button.dataset.calcMode === mode);
+  });
+  document.querySelectorAll('.calculator-pane').forEach(pane => pane.classList.remove('active'));
+  $(`${mode}-calc-pane`).classList.add('active');
+}
+
 $('calculator-btn').onclick = () => {
-  $('calculator-box').classList.toggle(
-    'hidden'
-  );
+  $('calculator-box').classList.toggle('hidden');
 };
 
-function calculatorPress(key) {
-  const display =
-    $('calc-display');
+function calculatorPress(key, displayId) {
+  const display = $(displayId);
 
   if (key === 'C') {
     display.value = '';
@@ -2636,50 +2734,120 @@ function calculatorPress(key) {
   }
 
   if (key === '⌫') {
-    display.value =
-      display.value.slice(0, -1);
-
+    display.value = display.value.slice(0, -1);
     return;
   }
 
   if (key === '=') {
     try {
-      let expression =
-        display.value
-          .replaceAll('×', '*')
-          .replaceAll('÷', '/')
-          .replaceAll('−', '-')
-          .replaceAll(
-            '√',
-            'Math.sqrt'
-          );
-
-      if (
-        !/^[0-9+\-*/().\sMathsqrt]+$/.test(
-          expression
-        )
-      ) {
-        throw new Error(
-          'Invalid expression'
-        );
-      }
-
-      const value = Function(
-        `"use strict"; return (${expression})`
-      )();
-
-      display.value =
-        Number.isFinite(value)
-          ? String(value)
-          : 'Error';
+      const value = evaluateMathExpression(display.value);
+      display.value = Number.isFinite(value) ? String(Number(value.toPrecision(12))) : 'Error';
     } catch {
       display.value = 'Error';
     }
-
     return;
   }
 
   display.value += key;
+}
+
+function normaliseExpression(expression) {
+  return expression
+    .replaceAll('×', '*')
+    .replaceAll('÷', '/')
+    .replaceAll('−', '-')
+    .replaceAll('π', 'PI')
+    .replaceAll('^', '**')
+    .replace(/\b√\(/g, 'sqrt(')
+    .replace(/\bln\(/g, 'ln(');
+}
+
+function evaluateMathExpression(expression, xValue = 0) {
+  const normalised = normaliseExpression(expression);
+  if (!/^[0-9x+\-*/().,\sA-Za-z_*]+$/.test(normalised)) {
+    throw new Error('Invalid characters');
+  }
+
+  const allowedNames = ['sin','cos','tan','sqrt','log','ln','PI','E','x'];
+  const words = normalised.match(/[A-Za-z_]+/g) || [];
+  if (words.some(word => !allowedNames.includes(word))) {
+    throw new Error('Unsupported function');
+  }
+
+  const evaluator = Function(
+    'x','sin','cos','tan','sqrt','log','ln','PI','E',
+    `"use strict"; return (${normalised});`
+  );
+
+  return evaluator(
+    xValue,
+    Math.sin,
+    Math.cos,
+    Math.tan,
+    Math.sqrt,
+    Math.log10,
+    Math.log,
+    Math.PI,
+    Math.E
+  );
+}
+
+$('draw-graph-btn').onclick = drawGraph;
+
+function drawGraph() {
+  const expression = $('graph-expression').value.trim();
+  const graphCanvas = $('graph-canvas');
+  const graphContext = graphCanvas.getContext('2d');
+  const width = graphCanvas.width;
+  const height = graphCanvas.height;
+  const xMin = -10, xMax = 10, yMin = -10, yMax = 10;
+
+  graphContext.fillStyle = '#ffffff';
+  graphContext.fillRect(0, 0, width, height);
+  graphContext.strokeStyle = '#d7dde5';
+  graphContext.lineWidth = 1;
+
+  for (let i = -10; i <= 10; i++) {
+    const px = (i - xMin) / (xMax - xMin) * width;
+    const py = height - (i - yMin) / (yMax - yMin) * height;
+    graphContext.beginPath(); graphContext.moveTo(px, 0); graphContext.lineTo(px, height); graphContext.stroke();
+    graphContext.beginPath(); graphContext.moveTo(0, py); graphContext.lineTo(width, py); graphContext.stroke();
+  }
+
+  graphContext.strokeStyle = '#17202a';
+  graphContext.lineWidth = 2;
+  const xAxis = height - (0 - yMin) / (yMax - yMin) * height;
+  const yAxis = (0 - xMin) / (xMax - xMin) * width;
+  graphContext.beginPath(); graphContext.moveTo(0, xAxis); graphContext.lineTo(width, xAxis); graphContext.stroke();
+  graphContext.beginPath(); graphContext.moveTo(yAxis, 0); graphContext.lineTo(yAxis, height); graphContext.stroke();
+
+  graphContext.strokeStyle = '#58cc02';
+  graphContext.lineWidth = 3;
+  graphContext.beginPath();
+  let drawingSegment = false;
+
+  try {
+    for (let px = 0; px < width; px++) {
+      const x = xMin + px / width * (xMax - xMin);
+      const y = evaluateMathExpression(expression, x);
+      const py = height - (y - yMin) / (yMax - yMin) * height;
+
+      if (!Number.isFinite(y) || py < -height || py > height * 2) {
+        drawingSegment = false;
+        continue;
+      }
+
+      if (!drawingSegment) {
+        graphContext.moveTo(px, py);
+        drawingSegment = true;
+      } else {
+        graphContext.lineTo(px, py);
+      }
+    }
+    graphContext.stroke();
+  } catch {
+    toast('That graph expression could not be understood.');
+  }
 }
 
 function modal(html) {
