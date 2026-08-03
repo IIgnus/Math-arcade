@@ -21,7 +21,7 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-import { loadStemContent(, formatContentReport } from './js/content-loader.js';
+import { loadStemContent, formatContentReport } from './js/content-loader.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
