@@ -21,10 +21,11 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-import {
-  loadContent,
-  formatContentReport
-} from './js/content-loader.js';
+import { loadContent, formatContentReport } from './js/content-loader.js';
+import { createQuizSession, isAnswerCorrect, recordQuestionAttempt, calculateSessionScore } from './js/quiz-engine.js';
+import { getTopicMastery as readTopicMastery, updateTopicMastery as recalculateTopicMastery, isTopicUnlocked, isLessonUnlocked as lessonUnlockedByProgress, calculateLessonStars, calculatorUnlocks as getCalculatorUnlocks } from './js/progression.js';
+import { createCalculator } from './js/calculator.js';
+import { createScratchpad } from './js/scratchpad.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -35,10 +36,7 @@ const firebaseConfig = {
   appId: '1:1021658486810:web:c98decd8bcdef9e0ea99a3'
 };
 
-const {
-  courses: COURSES,
-  report: CONTENT_REPORT
-} = loadContent(window.STEM_COURSES);
+const { courses: COURSES, report: CONTENT_REPORT } = loadContent(window.STEM_COURSES);
 const $ = id => document.getElementById(id);
 
 const DEFAULT_PLAYER = {
@@ -597,21 +595,7 @@ function renderPathNode(
 }
 
 function topicUnlocked(topic) {
-  if (!topic) {
-    return false;
-  }
-
-  if (!topic.prerequisite) {
-    return true;
-  }
-
-  if (player.placementCompleted) {
-    return true;
-  }
-
-  return getTopicMastery(
-    topic.prerequisite
-  ) >= 70;
+  return isTopicUnlocked(player, topic, getTopicMastery);
 }
 
 function findTopic(id) {
@@ -749,8 +733,7 @@ function renderTopic() {
 }
 
 function isLessonUnlocked(topic, index) {
-  if (index === 0 || player.placementCompleted) return true;
-  return player.completedLessons.includes(topic.lessons[index - 1].id);
+  return lessonUnlockedByProgress(player, topic, index);
 }
 
 
@@ -898,27 +881,12 @@ function startLessonPractice(id) {
 function startSession(config) {
   clearInterval(session.timer);
 
-  session = {
-    mode: config.mode || 'practice',
-    questions: [...config.questions],
-    index: 0,
-    correct: 0,
-    hearts: 5,
-    answered: false,
-    startTime: Date.now(),
-    timer: null,
-    timeLeft: 0,
-    config: {
-      ...config,
-      questions: [...config.questions]
-    }
-  };
+  session = createQuizSession(config);
 
   $('scratch-box').classList.add('hidden');
   $('calculator-box').classList.add('hidden');
 
-  strokes = [];
-  $('typed-notes').value = '';
+  scratchpad.reset();
 
   showView('game-view');
   renderQuestion();
@@ -1122,34 +1090,9 @@ function gradeAnswer(
 
   clearInterval(session.timer);
 
-  const correct =
-    question.type === 'choice'
-      ? value === question.answer
-      : !timedOut &&
-        Math.abs(
-          value - question.answer
-        ) <= question.tolerance;
+  const correct = isAnswerCorrect(question, value, timedOut);
 
-  const attempt =
-    player.attempts[question.id] || {
-      total: 0,
-      correct: 0,
-      recent: []
-    };
-
-  attempt.total++;
-
-  if (correct) {
-    attempt.correct++;
-  }
-
-  attempt.recent = [
-    ...(attempt.recent || []),
-    correct
-  ].slice(-5);
-
-  player.attempts[question.id] =
-    attempt;
+  recordQuestionAttempt(player, question.id, correct);
 
   const feedback =
     $('feedback-box');
@@ -1331,96 +1274,31 @@ function removeMistake(id) {
 }
 
 function updateTopicMastery(topicId) {
-  if (!topicId) {
-    return;
-  }
-
-  const topic =
-    findTopic(topicId);
-
-  const questions =
-    getTopicQuestions(topic);
-
-  let weightedTotal = 0;
-  let questionCount = 0;
-
-  questions.forEach(question => {
-    const attempt =
-      player.attempts[question.id];
-
-    if (!attempt) {
-      return;
+  return recalculateTopicMastery({
+    player,
+    topicId,
+    getTopicQuestions: id => {
+      const topic = findTopic(id);
+      return topic ? getTopicQuestions(topic) : [];
     }
-
-    const lifetimeAccuracy =
-      attempt.correct / attempt.total;
-
-    const recentAnswers =
-      attempt.recent || [];
-
-    const recentAccuracy =
-      recentAnswers
-        .filter(Boolean)
-        .length /
-      Math.max(
-        1,
-        recentAnswers.length
-      );
-
-    weightedTotal +=
-      recentAccuracy * 0.7 +
-      lifetimeAccuracy * 0.3;
-
-    questionCount++;
   });
-
-  player.mastery[topicId] =
-    questionCount
-      ? Math.round(
-          (
-            weightedTotal /
-            questionCount
-          ) * 100
-        )
-      : 0;
-
-  if (
-    player.mastery[topicId] >= 80 &&
-    !player.completedTopics.includes(
-      topicId
-    )
-  ) {
-    player.completedTopics.push(
-      topicId
-    );
-  }
 }
 
 function getTopicMastery(id) {
-  return Math.round(
-    player.mastery[id] || 0
-  );
+  return readTopicMastery(player, id);
 }
+
 
 function calculatorUnlocks() {
-  return {
-    basic: true,
-    scientific: getTopicMastery('division') >= 70 || player.placementCompleted,
-    graphing: getTopicMastery('expanding') >= 70 || player.placementCompleted
-  };
-}
-
-function calculatorModeRank(mode) {
-  return { none: 0, basic: 1, scientific: 2, graphing: 3 }[mode] || 0;
+  return getCalculatorUnlocks(player, getTopicMastery);
 }
 
 function allowedCalculatorMode(question) {
-  const requested = question.calculatorMode || (question.calculatorAllowed ? 'basic' : 'none');
-  const unlocked = calculatorUnlocks();
+  return calculator.allowedMode(question);
+}
 
-  if (requested === 'graphing' && unlocked.graphing) return 'graphing';
-  if (calculatorModeRank(requested) >= 2 && unlocked.scientific) return 'scientific';
-  return question.calculatorAllowed ? 'basic' : 'none';
+function configureCalculatorForQuestion(question) {
+  calculator.configureForQuestion(question);
 }
 
 
@@ -1490,13 +1368,7 @@ $('read-btn').onclick = () => {
 function finishSession() {
   clearInterval(session.timer);
 
-  const score =
-    Math.round(
-      (
-        session.correct /
-        session.questions.length
-      ) * 100
-    ) || 0;
+  const score = calculateSessionScore(session);
 
   const time = Math.round(
     (
@@ -1594,10 +1466,7 @@ function finishSession() {
 
   if (session.config.lessonId) {
     const lessonId = session.config.lessonId;
-    const stars =
-      score === 100 && session.hearts === 5 ? 3 :
-      score >= 80 ? 2 :
-      score >= 60 ? 1 : 0;
+    const stars = calculateLessonStars(score, session.hearts);
 
     player.lessonBestScores[lessonId] = Math.max(
       score,
@@ -2243,19 +2112,12 @@ function renderProfile() {
     </div>
   `).join('');
 
-const contentSummary =
-  $('content-health-summary');
-
-if (contentSummary) {
-  const formattedReport =
-    formatContentReport(CONTENT_REPORT);
-
-  contentSummary.textContent =
-    formattedReport.summary;
-
-  contentSummary.className =
-    `status-box content-${formattedReport.status}`;
-}
+  const contentSummary = $('content-health-summary');
+  if (contentSummary) {
+    const formattedReport = formatContentReport(CONTENT_REPORT);
+    contentSummary.textContent = formattedReport.summary;
+    contentSummary.className = `status-box content-${formattedReport.status}`;
+  }
 
   applySettings();
 }
@@ -2452,425 +2314,14 @@ function applySettings() {
     );
 }
 
-const canvas =
-  $('scratch-canvas');
+const scratchpad = createScratchpad({ $ });
 
-const context =
-  canvas.getContext('2d');
-
-let drawing = false;
-let strokes = [];
-let currentStroke = [];
-
-context.lineCap = 'round';
-context.lineJoin = 'round';
-
-function canvasPoint(event) {
-  const rectangle =
-    canvas.getBoundingClientRect();
-
-  return {
-    x:
-      (
-        event.clientX -
-        rectangle.left
-      ) *
-      (
-        canvas.width /
-        rectangle.width
-      ),
-
-    y:
-      (
-        event.clientY -
-        rectangle.top
-      ) *
-      (
-        canvas.height /
-        rectangle.height
-      )
-  };
-}
-
-function redraw() {
-  context.fillStyle = '#ffffff';
-
-  context.fillRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  context.strokeStyle = '#17202a';
-
-  context.lineWidth =
-    Number($('pen-size').value);
-
-  for (const stroke of strokes) {
-    if (stroke.length < 2) {
-      continue;
-    }
-
-    context.beginPath();
-
-    context.moveTo(
-      stroke[0].x,
-      stroke[0].y
-    );
-
-    stroke
-      .slice(1)
-      .forEach(point => {
-        context.lineTo(
-          point.x,
-          point.y
-        );
-      });
-
-    context.stroke();
-  }
-}
-
-canvas.onpointerdown = event => {
-  drawing = true;
-
-  currentStroke = [
-    canvasPoint(event)
-  ];
-
-  canvas.setPointerCapture(
-    event.pointerId
-  );
-};
-
-canvas.onpointermove = event => {
-  if (!drawing) {
-    return;
-  }
-
-  currentStroke.push(
-    canvasPoint(event)
-  );
-
-  strokes.push(currentStroke);
-
-  redraw();
-
-  strokes.pop();
-};
-
-canvas.onpointerup =
-canvas.onpointercancel = () => {
-  if (!drawing) {
-    return;
-  }
-
-  drawing = false;
-
-  if (currentStroke.length) {
-    strokes.push(currentStroke);
-  }
-
-  currentStroke = [];
-
-  redraw();
-};
-
-$('scratch-btn').onclick = () => {
-  $('scratch-box').classList.toggle(
-    'hidden'
-  );
-
-  redraw();
-};
-
-$('undo-draw-btn').onclick = () => {
-  strokes.pop();
-  redraw();
-};
-
-$('clear-draw-btn').onclick = () => {
-  strokes = [];
-  redraw();
-};
-
-$('pen-size').oninput = redraw;
-
-$('clear-notes-btn').onclick = () => {
-  $('typed-notes').value = '';
-};
-
-document
-  .querySelectorAll('.symbol-btn')
-  .forEach(button => {
-    button.onclick = () => {
-      const textArea =
-        $('typed-notes');
-
-      const start =
-        textArea.selectionStart;
-
-      textArea.value =
-        textArea.value.slice(
-          0,
-          start
-        ) +
-        button.textContent +
-        textArea.value.slice(
-          textArea.selectionEnd
-        );
-
-      textArea.focus();
-
-      textArea.selectionStart =
-      textArea.selectionEnd =
-        start +
-        button.textContent.length;
-    };
-  });
-
-document
-  .querySelectorAll('[data-scratch]')
-  .forEach(button => {
-    button.onclick = () => {
-      document
-        .querySelectorAll(
-          '[data-scratch]'
-        )
-        .forEach(tab => {
-          tab.classList.toggle(
-            'active',
-            tab === button
-          );
-        });
-
-      $('draw-pane').classList.toggle(
-        'active',
-        button.dataset.scratch ===
-          'draw'
-      );
-
-      $('type-pane').classList.toggle(
-        'active',
-        button.dataset.scratch ===
-          'type'
-      );
-    };
-  });
-
-redraw();
-
-const basicCalculatorKeys = [
-  '7','8','9','÷',
-  '4','5','6','×',
-  '1','2','3','−',
-  '0','.','(',')',
-  'C','⌫','=','+'
-];
-
-const scientificCalculatorKeys = [
-  'sin(','cos(','tan(','√(',
-  'log(','ln(','π','e',
-  '7','8','9','÷',
-  '4','5','6','×',
-  '1','2','3','−',
-  '0','.','^','+',
-  '(',')','C','⌫','='
-];
-
-let activeCalculatorMode = 'basic';
-
-function buildCalculatorGrid(containerId, keys, displayId) {
-  const container = $(containerId);
-  container.innerHTML = '';
-
-  keys.forEach(key => {
-    const button = document.createElement('button');
-    button.className = 'btn secondary';
-    button.textContent = key;
-    button.onclick = () => calculatorPress(key, displayId);
-    container.appendChild(button);
-  });
-}
-
-buildCalculatorGrid('calc-grid', basicCalculatorKeys, 'calc-display');
-buildCalculatorGrid('scientific-grid', scientificCalculatorKeys, 'scientific-display');
-
-function configureCalculatorForQuestion(question) {
-  const mode = allowedCalculatorMode(question);
-  const unlocks = calculatorUnlocks();
-
-  document.querySelectorAll('[data-calc-mode]').forEach(button => {
-    const buttonMode = button.dataset.calcMode;
-    const unlocked =
-      buttonMode === 'basic' ||
-      (buttonMode === 'scientific' && unlocks.scientific) ||
-      (buttonMode === 'graphing' && unlocks.graphing);
-
-    const permitted = calculatorModeRank(buttonMode) <= calculatorModeRank(mode);
-    button.disabled = !unlocked || !permitted;
-    button.textContent =
-      buttonMode === 'basic' ? 'Basic' :
-      buttonMode === 'scientific' ? `Scientific ${unlocked ? '' : '🔒'}` :
-      `Graphing ${unlocked ? '' : '🔒'}`;
-  });
-
-  switchCalculatorMode(mode === 'none' ? 'basic' : mode);
-  $('calculator-title').textContent =
-    mode === 'graphing' ? 'Graphing calculator' :
-    mode === 'scientific' ? 'Scientific calculator' :
-    'Basic calculator';
-  $('calculator-unlock-note').textContent =
-    mode === 'graphing' ? 'Graphing mode allowed' :
-    mode === 'scientific' ? 'Scientific mode allowed' :
-    'Basic mode allowed';
-}
-
-document.querySelectorAll('[data-calc-mode]').forEach(button => {
-  button.onclick = () => {
-    if (button.disabled) return;
-    switchCalculatorMode(button.dataset.calcMode);
-  };
+const calculator = createCalculator({
+  $,
+  getUnlocks: calculatorUnlocks,
+  toast
 });
 
-function switchCalculatorMode(mode) {
-  activeCalculatorMode = mode;
-  document.querySelectorAll('[data-calc-mode]').forEach(button => {
-    button.classList.toggle('active', button.dataset.calcMode === mode);
-  });
-  document.querySelectorAll('.calculator-pane').forEach(pane => pane.classList.remove('active'));
-  $(`${mode}-calc-pane`).classList.add('active');
-}
-
-$('calculator-btn').onclick = () => {
-  $('calculator-box').classList.toggle('hidden');
-};
-
-function calculatorPress(key, displayId) {
-  const display = $(displayId);
-
-  if (key === 'C') {
-    display.value = '';
-    return;
-  }
-
-  if (key === '⌫') {
-    display.value = display.value.slice(0, -1);
-    return;
-  }
-
-  if (key === '=') {
-    try {
-      const value = evaluateMathExpression(display.value);
-      display.value = Number.isFinite(value) ? String(Number(value.toPrecision(12))) : 'Error';
-    } catch {
-      display.value = 'Error';
-    }
-    return;
-  }
-
-  display.value += key;
-}
-
-function normaliseExpression(expression) {
-  return expression
-    .replaceAll('×', '*')
-    .replaceAll('÷', '/')
-    .replaceAll('−', '-')
-    .replaceAll('π', 'PI')
-    .replaceAll('^', '**')
-    .replace(/\b√\(/g, 'sqrt(')
-    .replace(/\bln\(/g, 'ln(');
-}
-
-function evaluateMathExpression(expression, xValue = 0) {
-  const normalised = normaliseExpression(expression);
-  if (!/^[0-9x+\-*/().,\sA-Za-z_*]+$/.test(normalised)) {
-    throw new Error('Invalid characters');
-  }
-
-  const allowedNames = ['sin','cos','tan','sqrt','log','ln','PI','E','x'];
-  const words = normalised.match(/[A-Za-z_]+/g) || [];
-  if (words.some(word => !allowedNames.includes(word))) {
-    throw new Error('Unsupported function');
-  }
-
-  const evaluator = Function(
-    'x','sin','cos','tan','sqrt','log','ln','PI','E',
-    `"use strict"; return (${normalised});`
-  );
-
-  return evaluator(
-    xValue,
-    Math.sin,
-    Math.cos,
-    Math.tan,
-    Math.sqrt,
-    Math.log10,
-    Math.log,
-    Math.PI,
-    Math.E
-  );
-}
-
-$('draw-graph-btn').onclick = drawGraph;
-
-function drawGraph() {
-  const expression = $('graph-expression').value.trim();
-  const graphCanvas = $('graph-canvas');
-  const graphContext = graphCanvas.getContext('2d');
-  const width = graphCanvas.width;
-  const height = graphCanvas.height;
-  const xMin = -10, xMax = 10, yMin = -10, yMax = 10;
-
-  graphContext.fillStyle = '#ffffff';
-  graphContext.fillRect(0, 0, width, height);
-  graphContext.strokeStyle = '#d7dde5';
-  graphContext.lineWidth = 1;
-
-  for (let i = -10; i <= 10; i++) {
-    const px = (i - xMin) / (xMax - xMin) * width;
-    const py = height - (i - yMin) / (yMax - yMin) * height;
-    graphContext.beginPath(); graphContext.moveTo(px, 0); graphContext.lineTo(px, height); graphContext.stroke();
-    graphContext.beginPath(); graphContext.moveTo(0, py); graphContext.lineTo(width, py); graphContext.stroke();
-  }
-
-  graphContext.strokeStyle = '#17202a';
-  graphContext.lineWidth = 2;
-  const xAxis = height - (0 - yMin) / (yMax - yMin) * height;
-  const yAxis = (0 - xMin) / (xMax - xMin) * width;
-  graphContext.beginPath(); graphContext.moveTo(0, xAxis); graphContext.lineTo(width, xAxis); graphContext.stroke();
-  graphContext.beginPath(); graphContext.moveTo(yAxis, 0); graphContext.lineTo(yAxis, height); graphContext.stroke();
-
-  graphContext.strokeStyle = '#58cc02';
-  graphContext.lineWidth = 3;
-  graphContext.beginPath();
-  let drawingSegment = false;
-
-  try {
-    for (let px = 0; px < width; px++) {
-      const x = xMin + px / width * (xMax - xMin);
-      const y = evaluateMathExpression(expression, x);
-      const py = height - (y - yMin) / (yMax - yMin) * height;
-
-      if (!Number.isFinite(y) || py < -height || py > height * 2) {
-        drawingSegment = false;
-        continue;
-      }
-
-      if (!drawingSegment) {
-        graphContext.moveTo(px, py);
-        drawingSegment = true;
-      } else {
-        graphContext.lineTo(px, py);
-      }
-    }
-    graphContext.stroke();
-  } catch {
-    toast('That graph expression could not be understood.');
-  }
-}
 
 function modal(html) {
   $('overlay-content').innerHTML =
@@ -3011,3 +2462,4 @@ function escapeHtml(value) {
 }
 
 syncUI();
+
