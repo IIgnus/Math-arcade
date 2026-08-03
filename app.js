@@ -300,33 +300,13 @@ function showView(id) {
   window.scrollTo(0, 0);
 }
 
-  document
-    .querySelectorAll('[data-view]')
-    .forEach(button => {
-      button.classList.toggle(
-        'active',
-        button.dataset.view === id
-      );
-    });
-
-  if (id === 'home-view') {
-    renderHome();
-  }
-
-  if (id === 'progress-view') {
-    renderProgress();
-  }
-
-  if (id === 'daily-view') {
-    renderDaily();
-  }
-
-  if (id === 'tournament-view') {
-    renderTournament();
-  }
-
-  window.scrollTo(0, 0);
-}
+document
+  .querySelectorAll('[data-view]')
+  .forEach(element => {
+    element.onclick = () => {
+      showView(element.dataset.view);
+    };
+  });
 
 document
   .querySelectorAll('[data-view]')
