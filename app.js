@@ -21,6 +21,8 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
+import { loadContent, formatContentReport } from './js/content-loader.js';
+
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
   authDomain: 'math-game-19070.firebaseapp.com',
@@ -30,7 +32,7 @@ const firebaseConfig = {
   appId: '1:1021658486810:web:c98decd8bcdef9e0ea99a3'
 };
 
-const COURSES = window.STEM_COURSES;
+const { courses: COURSES, report: CONTENT_REPORT } = loadContent({ blockOnErrors: true });
 const $ = id => document.getElementById(id);
 
 const DEFAULT_PLAYER = {
@@ -2234,6 +2236,12 @@ function renderProfile() {
       <small>${escapeHtml(description)}</small>
     </div>
   `).join('');
+
+  const contentSummary = $('content-health-summary');
+  if (contentSummary) {
+    contentSummary.textContent = formatContentReport(CONTENT_REPORT);
+    contentSummary.className = CONTENT_REPORT.valid ? 'status-box content-ok' : 'status-box content-error';
+  }
 
   applySettings();
 }
