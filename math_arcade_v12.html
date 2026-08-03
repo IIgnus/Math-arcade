@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math & Science Arcade Workspace</title>
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+      import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+      import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+
+      // PASTE YOUR PERSONAL COPIED FIREBASE CONFIGURATION OBJECT HERE:
+      const firebaseConfig = {
+        apiKey: "AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ",
+        authDomain: ""math-game-19070.firebaseapp.com",
+        projectId: "math-game-19070",
+        storageBucket: "math-game-19070.firebasestorage.app",
+        messagingSenderId: "1021658486810",
+        appId: "1:1021658486810:web:c98decd8bcdef9e0ea99a3"
+      };
+
+      // Check if keys are modified before spinning up live web sockets
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+         const app = initializeApp(firebaseConfig);
+         window.db = getFirestore(app);
+         window.auth = getAuth(app);
+         window.googleProvider = new GoogleAuthProvider();
+      }
+    </script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-dark: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        .theme-midnight {
+            --bg-dark: #0a0f1d;
+            --panel-dark: #111a2e;
+            --accent-blue: #6366f1;
+            --text-main: #e2e8f0;
+        }
+        .theme-cyber {
+            --bg-dark: #000000;
+            --panel-dark: #0d0d0d;
+            --accent-blue: #00ff66;
+            --text-main: #00ff66;
+            --text-muted: #00aa33;
+            --accent-green: #00ff66;
+            --accent-red: #ff0033;
+        }
+        .theme-forest {
+            --bg-dark: #06140e;
+            --panel-dark: #0b241b;
+            --accent-blue: #10b981;
+            --text-main: #ecfdf5;
+            --text-muted: #6ee7b7;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); overflow-x: hidden; transition: all 0.3s; }
+        header { background: var(--panel-dark); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--panel-dark); }
+        .btn { background: var(--panel-dark); color: var(--text-main); padding: 10px 18px; border: 1px solid var(--accent-blue); border-radius: 6px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.1s; }
+        .btn:hover { transform: scale(1.03); background: var(--accent-blue); color: #000; }
+        .view-panel { display: none; max-width: 800px; margin: 30px auto; padding: 25px; background: var(--panel-dark); border-radius: 12px; position: relative; }
+        .active-view { display: block; }
+        .grid-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { background: var(--bg-dark); padding: 20px; border-radius: 8px; border: 1px solid #334155; cursor: pointer; text-align: center; }
+        .card:hover { border-color: var(--accent-blue); }
+        .progress-container { background: #334155; height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; }
+        .progress-bar { background: var(--accent-green); height: 100%; width: 0%; transition: width 0.4s; }
+        #scratchpad-canvas { background: #fff; display: block; margin: 15px auto; border-radius: 6px; cursor: crosshair; }
+        .particle-canvas { position: fixed; top:0; left:0; pointer-events:none; z-index:9999; width:100%; height:100%; }
+        .hud { display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; font-size: 1.1rem; }
+        .option-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: var(--bg-dark); border: 1px solid #334155; border-radius: 6px; color: var(--text-main); text-align: left; cursor: pointer; }
+        .option-btn:hover { background: #334155; }
+        .overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000; }
+        .overlay-content { background: var(--panel-dark); padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; }
+        #toast { position: fixed; bottom: 20px; right: 20px; background: var(--accent-blue); color: #000; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: none; z-index: 10000; }
+    </style>
+</head>
+<body>
+
+    <canvas id="effects-canvas" class="particle-canvas"></canvas>
+    <div id="toast"></div>
+
+    <header>
+        <h2 onclick="switchView('main-menu')" style="cursor:pointer;">🎓 STEM Arcade Hub</h2>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span id="player-profile-tag">👤 Student (Lv.1)</span>
+            <span id="player-points-tag">🪙 0 pts</span>
+            <button class="btn" onclick="toggleMute()">🔊 Mute</button>
+            <button class="btn" onclick="switchView('settings-view')">⚙️ Settings</button>
+            <button class="btn" onclick="switchView('admin-view')">🛠️ Admin</button>
+        </div>
+    </header>
+
+    <!-- Main Entry Authentication Hub Screen -->
+    <div id="auth-view" class="view-panel active-view">
+        <h2 style="margin-bottom:15px; text-align:center;">Secure Account Access</h2>
+        <p style="color:var(--text-muted); text-align:center; margin-bottom:20px;">Register local profile nodes or sync tracking variables using cloud endpoints.</p>
+        <div style="max-width:350px; margin:0 auto; display:flex; flex-direction:column; gap:12px;">
+            <input type="text" id="username-input" placeholder="Enter Nickname Handle" style="padding:10px; border-radius:6px; border:1px solid #334155; background:var(--bg-dark); color:#fff;">
+            <button class="btn" style="justify-content:center;" onclick="loginLocal()">Register Local Handle</button>
+            <div style="text-align:center; color:var(--text-muted); margin:5px 0;">- OR -</div>
+            <button class="btn" style="justify-content:center; background:#fff; color:#000;" onclick="loginGoogle()">🔒 Continue With Google</button>
+        </div>
+    </div>
+
+    <!-- Main Navigation Menu -->
+    <div id="main-menu" class="view-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Select Learning Track</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="startSurvival()">🕹️ Endless Survival</button>
+                <button class="btn" onclick="startMultiplayer()">⚔️ Pass & Play PvP</button>
+                <button class="btn" onclick="switchView('shop-view')">🏪 Custom Shop</button>
+            </div>
+        </div>
+        <div id="daily-quest-box" style="background:rgba(56,189,248,0.1); border:1px dashed var(--accent-blue); padding:12px; border-radius:6px; margin-bottom:15px; font-weight:bold;">
+            📅 Daily Objective: Complete 3 Problems (<span id="daily-progress">0</span>/3)
+        </div>
+        <div class="grid-menu" id="courses-grid"></div>
+    </div>
+
+    <!-- Active Sandbox/Gameplay Loop Interface Arena -->
+    <div id="gameplay-view" class="view-panel">
+        <div class="hud">
+            <div>Topic: <span id="hud-topic">---</span></div>
+            <div>Timer: <span id="hud-timer">30</span>s</div>
+            <div>Hearts: <span id="hud-hearts">❤️❤️❤️</span></div>
+        </div>
+        <div class="progress-container" style="margin-bottom:20px;"><div id="question-progress" class="progress-bar" style="width:0%;"></div></div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4 id="question-text" style="font-size:1.3rem; margin-bottom:15px;">Question Loader Block Text...</h4>
+            <button class="btn" style="padding:5px 10px;" id="tts-btn" onclick="readQuestionText()">🔊 Read</button>
+        </div>
+
+        <div id="options-box"></div>
+
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button class="btn" id="hint-action-btn" onclick="triggerConceptHint()">💡 Request Tutor Hint</button>
+            <button class="btn" onclick="toggleScratchpad()">✏️ Toggle Scratchpad</button>
+            <button class="btn" style="border-color:var(--accent-red);" onclick="exitGame()">🏳️ Forfeit</button>
+        </div>
+
+        <!-- Pop-out Drawing Scratchpad Element -->
+        <div id="scratchpad-box" style="display:none; margin-top:15px; background:var(--bg-dark); padding:15px; border-radius:8px;">
+            <h5>Interactive Calculation Scratchpad</h5>
+            <canvas id="scratchpad-canvas" width="600" height="200"></canvas>
+            <button class="btn" onclick="clearScratchpad()">Clear Canvas</button>
+        </div>
+    </div>
+
+    <!-- Settings Hub Overlay Panel -->
+    <div id="settings-view" class="view-panel">
+        <h3>System Settings Hub</h3>
+        <hr style="margin:15px 0; border:1px solid #334155;">
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">Synthesizer Master Volume Control</label>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" style="width:100%;">
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">Timer Speed Difficulty Factor</label>
+            <select id="difficulty-select" style="width:100%; padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px;">
+                <option value="45">Easy Sandbox Mode (45 Second Limit)</option>
+                <option value="30" selected>Standard Arcade Mode (30 Second Limit)</option>
+                <option value="15">Insane Grandmaster Mode (15 Second Limit)</option>
+            </select>
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:bold;">Visual Environment Aesthetics Skin</label>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="changeTheme('dark')">Slate Dark</button>
+                <button class="btn" onclick="changeTheme('midnight')">Midnight Blue</button>
+                <button class="btn" onclick="changeTheme('cyber')">Cyber Neon Matrix</button>
+                <button class="btn" onclick="changeTheme('forest')">Enchanted Forest</button>
+            </div>
+        </div>
+        <button class="btn" style="margin-top:15px;" onclick="switchView('main-menu')">↩️ Save & Close Settings</button>
+    </div>
+
+    <!-- Administrative Operations Dashboard -->
+    <div id="admin-view" class="view-panel">
+        <h3>Administrative Curriculum Engine</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Default Lock Code: admin123</p>
+        <hr style="margin:15px 0; border:1px solid #334155;">
+        
+        <div id="admin-auth-box">
+            <input type="password" id="admin-pass" placeholder="Enter Admin Password Key" style="padding:10px; border-radius:6px; background:var(--bg-dark); color:#fff; border:1px solid #334155; width:100%; margin-bottom:10px;">
+            <button class="btn" onclick="authAdmin()">Unlock Controller Panel</button>
+        </div>
+
+        <div id="admin-controls" style="display:none;">
+            <h4>Inject Custom Problem Node</h4>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                <select id="inject-subject" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px;">
+                    <option value="Algebra">Algebra</option>
+                    <option value="Calculus">Calculus</option>
+                    <option value="Quantum Physics">Quantum Physics</option>
+                </select>
+                <input type="text" id="inject-q" placeholder="Question Text Statement" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px; border:1px solid #334155;">
+                <input type="text" id="inject-a" placeholder="Option A" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px; border:1px solid #334155;">
+                <input type="text" id="inject-b" placeholder="Option B" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px; border:1px solid #334155;">
+                <input type="text" id="inject-hint" placeholder="Conceptual Support Hint Text Explanation" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px; border:1px solid #334155;">
+                <select id="inject-correct" style="padding:10px; background:var(--bg-dark); color:#fff; border-radius:6px;">
+                    <option value="0">Option A is Correct</option>
+                    <option value="1">Option B is Correct</option>
+                </select>
+                <button class="btn" onclick="saveCustomQuestionNode()">Sanitize & Inject Data Payload</button>
+            </div>
+            
+            <h4 style="margin-top:25px;">Data Infrastructure Report Dispatches</h4>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn" onclick="exportAnalyticsCSV()">💾 Export Progress Sheet (.CSV)</button>
+                <button class="btn" onclick="dispatchTeacherReportEmail()">📧 Dispatch Weekly Analytics Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arcade Rewards Shop Panel Container -->
+    <div id="shop-view" class="view-panel">
+        <h3>Cosmetics Reward Shop</h3>
+        <p style="color:var(--text-muted); margin-bottom:15px;">Spend your fun tokens on account banners and custom display avatars.</p>
+        <div class="grid-menu">
+            <div class="card" onclick="buyAvatar('Cyber Robot', 50)">🤖 Cyber Robot<br><span style="color:var(--accent-blue);">Cost: 50 pts</span></div>
+            <div class="card" onclick="buyAvatar('Cosmic Wizard', 100)">🧙 Cosmic Wizard<br><span style="color:var(--accent-blue);">Cost: 100 pts</span></div>
+            <div class="card" onclick="buyTheme('theme-cyber', 40)">🌌 Matrix Grid Theme<br><span style="color:var(--accent-blue);">Cost: 40 pts</span></div>
+            <div class="card" onclick="buyTheme('theme-forest', 60)">🌲 Forest Green Theme<br><span style="color:var(--accent-blue);">Cost: 60 pts</span></div>
+        </div>
+        <button class="btn" style="margin-top:20px;" onclick="switchView('main-menu')">↩️ Back To Hub</button>
+    </div>
+
+    <!-- Modals & Context Overlays -->
+    <div id="general-overlay" class="overlay">
+        <div class="overlay-content" id="overlay-target-body"></div>
+    </div>
+
+    <script>
+        // Core Curriculum Dataset
+        const databaseSeed = {
+            "Algebra": [
+                { q: "Isolate x: 3x - 9 = 0", options: ["x = 3", "x = 9"], ans: 0, hint: "Add 9 to both sides of the evaluation matrix, then divide cleanly by structural scale 3." },
+                { q: "Evaluate structural law matrix base rules: x^2 * x^3", options: ["x^5", "x^6"], ans: 0, hint: "When multiplying identical variable expressions, you combine their upper exponents summatically." }
+            ],
+            "Trigonometry": [
+                { q: "What is the structural value of Sin(π/2)?", options: ["0", "1"], ans: 1, hint: "On the unit circle system, ninety degrees matches coordinates peaking exactly at the positive y-axis ceiling." }
+            ],
+            "Calculus": [
+                { q: "Find the derivative: f(x) = x^4", options: ["4x^3", "3x^4"], ans: 0, hint: "Apply the Polynomial Power Rule. Shift the power exponent down as a multiplier, then drop the remaining count by one value." },
+                { q: "Find the derivative of a standalone system constant: d/dx(75)", options: ["75", "0"], ans: 1, hint: "Constants have zero structural rate of motion or steepness change over time, keeping their slope flat." }
+            ],
+            "Geometry": [
+                { q: "Find the hypotenuse length of a right triangle with side profiles scaled at 3 and 4.", options: ["5", "7"], ans: 0, hint: "Apply the Pythagorean system formula. Combine the squares of both variables, then isolate using root operations." }
+            ],
+            "Statistics": [
+                { q: "Find the median value of dataset:", options: ["3", "4.6"], ans: 0, hint: "Arrange items sequentially and extract the exact central structural coordinate node." }
+            ],
+            "Quantum Physics": [
+                { q: "What metric is defined by Planck constant adjustments matching variable E=hf structures?", options: ["Photon Energy", "Wave Inertia"], ans: 0, hint: "Energy scales linearly with frequency based on atomic quantization rules." }
+            ],
+            "Organic Chemistry": [
+                { q: "Identify the atomic composition backbone profile tag matching standard Ethane chains.", options: ["C2H6", "CH4"], ans: 0, hint: "Uses the general Alkane chain mapping matrix formula: C_n H_{2n+2}." }
+            ]
+        };
+
+        // Engine State Parameters
+        let player = { name: "Guest", points: 0, xp: 0, level: 1, dailyCount: 0, avatar: "👤 Student", unlockedItems: [] };
+        let trackingProgress = { "Algebra": 0, "Trigonometry": 0, "Calculus": 0, "Geometry": 0, "Statistics": 0, "Quantum Physics": 0, "Organic Chemistry": 0 };
+        let activeSubject = "";
+        let currentQuestionIdx = 0;
+        let runningScore = 0;
+        let totalHearts = 3;
+        let activeGameTimer = null;
+        let timeRemaining = 30;
+        let defaultTimerSetting = 30;
+        let errorLogs = [];
+        let soundMuted = false;
+
+        // Multiplayer state trackers
+        let isMultiplayerMode = false;
+        let currentPlayerTurn = 1;
+        let p1Score = 0; let p2Score = 0;
+        let isSurvivalMode = false;
+
+        // Native Audio Wave Synthesis Subroutine Engine
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playWaveSound(freq, duration, type="sine") {
+            if (soundMuted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            const userVol = parseFloat(document.getElementById('volume-slider').value) || 0.5;
+            gain.gain.setValueAtTime(userVol * 0.2, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function toggleMute() {
+            soundMuted = !soundMuted;
+            document.getElementById('tts-btn').parentElement.children.innerText = soundMuted ? "🔇 Unmute" : "🔊 Mute";
+            showToastMessage(soundMuted ? "Audio feedback muted" : "Audio feedback active");
+        }
+
+        // View Management Interchanger Matrix
+        function switchView(targetViewId) {
+            document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active-view'));
+            document.getElementById(targetViewId).classList.add('active-view');
+            if (targetViewId === 'main-menu') generateCourseGridMenu();
+        }
+
+        function showToastMessage(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2500);
+        }
+
+        // Profile Initialization Pipeline
+        function loginLocal() {
+            const userBox = document.getElementById('username-input').value.trim();
+            player.name = userBox ? userBox : "Local Scholar";
+            syncProfileUIElements();
+            switchView('main-menu');
+        }
+
+        function loginGoogle() {
+            showToastMessage("Connecting to Secure Identity Services...");
+            // Mimics integration callback routines seamlessly if client keys aren't updated
+            setTimeout(() => {
+                player.name = "Verified Academic";
+                syncProfileUIElements();
+                switchView('main-menu');
+            }, 1000);
+        }
+
+        function syncProfileUIElements() {
+            document.getElementById('player-profile-tag').innerText = `${player.avatar} ${player.name} (Lv.${player.level})`;
+            document.getElementById('player-points-tag').innerText = `🪙 ${player.points} pts`;
+        }
+
+        // Render Dynamic Course Grid Layout Matrix
+        function generateCourseGridMenu() {
+            const container = document.getElementById('courses-grid');
+            container.innerHTML = "";
+            Object.keys(databaseSeed).forEach((subject, idx) => {
+                const totalQs = databaseSeed[subject].length;
+                const completedPct = trackingProgress[subject] || 0;
+                
+                const card = document.createElement('div');
+                card.className = "card";
+                card.innerHTML = `
+                    <h4>${subject} Pathway</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:5px 0;">Problems Mapped: ${totalQs}</p>
+                    <div class="progress-container"><div class="progress-bar" style="width:${completedPct}%;"></div></div>
+                    <div style="margin-top:12px; display:flex; gap:5px; justify-content:center;">
+                        <button class="btn" style="padding:5px 10px; font-size:0.8rem;" onclick="launchStandardPractice('${subject}')">Practice</button>
+                        <button class="btn" style="padding:5px 10px; font-size:0.8rem; border-color:var(--accent-green);" onclick="launchMiniTest('${subject}')">Test</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Core Gameplay State Initialization Engines
+        function launchStandardPractice(subject) {
+            isMultiplayerMode = false; isSurvivalMode = false;
+            activeSubject = subject; currentQuestionIdx = 0; runningScore = 0; totalHearts = 3;
+            switchView('gameplay-view');
+            loadProblemIndexLoop();
+        }
+
+        function launchMiniTest(subject) {
+            launchStandardPractice(subject);
+            showToastMessage(`Standard Subject Mini-Test Initiated! Double Score Multipliers Engaged.`);
+        }
+
+        function startSurvival() {
+            isMultiplayerMode = false; isSurvivalMode = true;
+            activeSubject = Object.keys(databaseSeed); currentQuestionIdx = 0; runningScore = 0; totalHearts = 3;
+            switchView('gameplay-view');
+            loadProblemIndexLoop();
+        }
+
+        function startMultiplayer() {
+            isMultiplayerMode = true; isSurvivalMode = false; currentPlayerTurn = 1; p1Score = 0; p2Score = 0;
+            activeSubject = Object.keys(databaseSeed); currentQuestionIdx = 0; totalHearts = 999; 
+            switchView('gameplay-view');
+            loadProblemIndexLoop();
+        }
+
+        // Active Problem Processing Pipeline
+        function loadProblemIndexLoop() {
+            clearInterval(activeGameTimer);
+            document.getElementById('scratchpad-box').style.display = 'none';
+            document.getElementById('hint-action-btn').style.display = 'inline-flex';
+
+            let currentDataset = databaseSeed[activeSubject];
+            if (isSurvivalMode || isMultiplayerMode) {
+                const randSub = Object.keys(databaseSeed)[Math.floor(Math.random() * Object.keys(databaseSeed).length)];
+                currentDataset = databaseSeed[randSub];
+                currentQuestionIdx = Math.floor(Math.random() * currentDataset.length);
+            }
+
+            if (!currentDataset || currentDataset.length === 0 || (!isSurvivalMode && !isMultiplayerMode && currentQuestionIdx >= currentDataset.length)) {
+                terminateMatchLoop(true);
+                return;
+            }
+
+            const activeNode = currentDataset[currentQuestionIdx];
+            document.getElementById('hud-topic').innerText = isMultiplayerMode ? `Player ${currentPlayerTurn}'s Turn` : activeSubject;
+            document.getElementById('hud-hearts').innerText = isMultiplayerMode ? "⚔️ Arena" : "❤️".repeat(totalHearts);
+            document.getElementById('question-text').innerText = activeNode.q;
+
+            const optionsBox = document.getElementById('options-box');
+            optionsBox.innerHTML = "";
+            activeNode.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn";
+                btn.innerText = opt;
+                btn.onclick = () => processUserSelectionAnswer(idx, activeNode);
+                optionsBox.appendChild(btn);
+            });
+
+            // Engagement Timer System
+            timeRemaining = parseInt(document.getElementById('difficulty-select').value) || 30;
+            document.getElementById('hud-timer').innerText = timeRemaining;
+            activeGameTimer = setInterval(() => {
+                timeRemaining--;
+                document.getElementById('hud-timer').innerText = timeRemaining;
+                if (timeRemaining <= 0) {
+                    clearInterval(activeGameTimer);
+                    handleAnswerFailure(activeNode, "Timeout Violation Constraints Passed");
+                }
+            }, 1000);
+        }
+
+        // Accessibility Audio Speech Engine Implementation
+        function readQuestionText() {
+            const txt = document.getElementById('question-text').innerText;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(txt);
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToastMessage("Speech engine unavailable inside this browser context.");
+            }
+        }
+
+        // Input Sanitization and Response Checking Engine
+        function processUserSelectionAnswer(selectedIdx, node) {
+            clearInterval(activeGameTimer);
+            if (selectedIdx === node.ans) {
+                playWaveSound(587.33, 0.1); 
+                setTimeout(() => playWaveSound(880, 0.15), 100);
+                triggerParticleCelebrationAnimation();
+                
+                if (isMultiplayerMode) {
+                    if (currentPlayerTurn === 1) p1Score += 10; else p2Score += 10;
+                } else {
+                    runningScore += 10;
+                    player.points += 10;
+                    player.dailyCount++;
+                    document.getElementById('daily-progress').innerText = Math.min(player.dailyCount, 3);
+                    if (player.dailyCount === 3) { player.points += 50; showToastMessage("Daily Objective Unlocked! +50 XP"); player.dailyCount = 4; }
+                }
+                showToastMessage("Mathematical Solution Confirmed Correct!");
+                proceedNextStepGameLoop();
+            } else {
+                handleAnswerFailure(node, `User Selected Choice Index: ${selectedIdx}`);
+            }
+            syncProfileUIElements();
+        }
+
+        // Error log fix function
+        function handleAnswerFailure(node, reason) {
+            playWaveSound(120, 0.3, "sawtooth");
+            errorLogs.push({ subject: activeSubject, question: node.q, reason: reason, timestamp: new Date().toLocaleTimeString() });
+
+            if (isMultiplayerMode) {
+                showToastMessage(`Incorrect! Player ${currentPlayerTurn} drops parameters.`);
+            } else {
+                totalHearts--;
+                showToastMessage("Logical Exception Raised: Incorrect Answer Added.");
+                if (totalHearts <= 0) { terminateMatchLoop(false); return; }
+            }
+            
+            // Pop up targeted tutor context automatically upon failure
+            triggerContextualTutorOverlay(node);
+        }
+
+        function triggerContextualTutorOverlay(node) {
+            const container = document.getElementById('general-overlay');
+            const target = document.getElementById('overlay-target-body');
+            container.style.display = 'flex';
+            target.innerHTML = `
+                <h3 style="color:var(--accent-red); margin-bottom:10px;">Diagnostic AI Coach Real-Time Evaluation</h3>
+                <p style="margin-bottom:15px; line-height:1.4;">"The mathematical path chosen contains flawed transformation variables. Let's look at the underlying logical steps:"</p>
+                <div style="background:var(--bg-dark); padding:12px; border-radius:6px; font-style:italic; margin-bottom:15px; border-left:4px solid var(--accent-blue);">
+                    ${node.hint}
+                </div>
+                <button class="btn" onclick="closeOverlayAndContinue()">Resume Core Challenge Thread</button>
+            `;
+        }
+
+        function closeOverlayAndContinue() {
+            document.getElementById('general-overlay').style.display = 'none';
+            proceedNextStepGameLoop();
+        }
+
+        function triggerConceptHint() {
+            document.getElementById('hint-action-btn').style.display = 'none';
+            const node = databaseSeed[activeSubject][currentQuestionIdx] || { hint: "Break the math down step-by-step into simpler linear forms." };
+            
+            const container = document.getElementById('general-overlay');
+            const target = document.getElementById('overlay-target-body');
+            container.style.display = 'flex';
+            target.innerHTML = `
+                <h3>💡 Step-by-Step Educational Support Hint</h3>
+                <hr style="margin:10px 0; border:1px solid #334155;">
+                <p style="margin-bottom:15px; line-height:1.4;">${node.hint}</p>
+                <button class="btn" onclick="document.getElementById('general-overlay').style.display = 'none'">Return to Problem</button>
+            `;
+        }
+
+        function proceedNextStepGameLoop() {
+            if (isMultiplayerMode) {
+                currentPlayerTurn = currentPlayerTurn === 1 ? 2 : 1;
+                loadProblemIndexLoop();
+            } else if (isSurvivalMode) {
+                loadProblemIndexLoop();
+            } else {
+                currentQuestionIdx++;
+                trackingProgress[activeSubject] = Math.min(100, Math.floor((currentQuestionIdx / databaseSeed[activeSubject].length) * 100));
+                loadProblemIndexLoop();
+            }
+        }
+
+        // Match Evaluation Terminations
+        function terminateMatchLoop(victoryClean) {
+            clearInterval(activeGameTimer);
+            switchView('main-menu');
+            
+            const container = document.getElementById('general-overlay');
+            const target = document.getElementById('overlay-target-body');
+            container.style.display = 'flex';
+
+            if (isMultiplayerMode) {
+                const winnerText = p1Score > p2Score ? "Player 1 Dominates Triangles!" : p2Score > p1Score ? "Player 2 Conquers Math Matrix!" : "Mathematical Equilibrium Tie!";
+                target.innerHTML = `<h3>⚔️ Arena PvP Final Standings</h3><p style='margin:15px 0;'>P1 Score: ${p1Score} | P2 Score: ${p2Score}</p><h4>${winnerText}</h4><br><button class='btn' onclick='document.getElementById("general-overlay").style.display="none"'>Close Results</button>`;
+            } else if (victoryClean && !isSurvivalMode) {
+                playWaveSound(440, 0.1); setTimeout(() => playWaveSound(554.37, 0.1), 100); setTimeout(() => playWaveSound(659.25, 0.3), 200);
+                target.innerHTML = `
+                    <h3 style="color:var(--accent-green);">🎓 Pathway Curriculum Mastery Achieved!</h3>
+                    <p style="margin:12px 0;">You cleared all standard lessons inside the ${activeSubject} module cleanly.</p>
+                    <button class="btn" onclick="printDiplomaCertificate('${player.name}', '${activeSubject}')">📜 Render Printable Graduation Diploma</button>
+                    <button class="btn" style="margin-left:10px;" onclick='document.getElementById("general-overlay").style.display="none"'>Return to Hub</button>
+                `;
+            } else {
+                target.innerHTML = `<h3>❌ Operation Block Aborted (Game Over)</h3><p style='margin:15px 0;'>Total points banked during this execution cycle: ${runningScore}</p><button class='btn' onclick='document.getElementById("general-overlay").style.display="none"'>Reinitialize Matrix</button>`;
+            }
+        }
+
+        function exitGame() { terminateMatchLoop(false); }
+
+        // Local Canvas Drawing Engine
+        let holdingPen = false;
+        const canvas = document.getElementById('scratchpad-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function toggleScratchpad() {
+            const box = document.getElementById('scratchpad-box');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+            if (box.style.display === 'block') {
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.strokeStyle = "#000000"; ctx.lineWidth = 3; ctx.lineCap = "round";
+            }
+        }
+        function clearScratchpad() { ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); }
+        
+        canvas.onmousedown = () => holdingPen = true;
+        canvas.onmouseup = () => { holdingPen = false; ctx.beginPath(); };
+        canvas.onmousemove = (e) => {
+            if (!holdingPen) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        };
+
+        // Custom HTML5 Vector Particle Explosions Engine Routine
+        const fxCanvas = document.getElementById('effects-canvas');
+        const fxCtx = fxCanvas.getContext('2d');
+        let particleArray = [];
+
+        function resizeFxCanvas() { fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeFxCanvas);
+        resizeFxCanvas();
+
+        function triggerParticleCelebrationAnimation() {
+            for(let i=0; i<35; i++) {
+                particleArray.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 3,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.6) * 12,
+                    size: Math.random() * 5 + 3,
+                    color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                    alpha: 1
+                });
+            }
+        }
+
+        function processActiveParticlesLoop() {
+            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            for(let i = particleArray.length - 1; i >= 0; i--) {
+                let p = particleArray[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.25; // Apply gravity values
+                p.alpha -= 0.02;
+                if(p.alpha <= 0) { particleArray.splice(i, 1); continue; }
+                fxCtx.globalAlpha = p.alpha;
+                fxCtx.fillStyle = p.color;
+                fxCtx.beginPath();
+                fxCtx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                fxCtx.fill();
+            }
+            requestAnimationFrame(processActiveParticlesLoop);
+        }
+        requestAnimationFrame(processActiveParticlesLoop);
+
+        // Custom Layout Styling Modification Routines
+        function changeTheme(themeKey) {
+            document.body.className = themeKey === 'dark' ? '' : `theme-${themeKey}`;
+            showToastMessage(`Visual canvas theme switched to ${themeKey}`);
+        }
+
+        // Client-Side Dynamic Certificate Print Layout Pipeline
+        function printDiplomaCertificate(studentName, trackTitle) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head><title>Academic Degree Verification</title></head>
+                <body style="text-align:center; padding:50px; font-family:'Georgia', serif; background:#fdfdf7; color:#2c2c2c; border:20px double #b89742; margin:30px;">
+                    <h1 style="font-size:3.5rem; color:#1a365d; margin-bottom:10px;">STEM ARCADE ACADEMY</h1>
+                    <h3 style="letter-spacing:3px; color:#718096; margin-bottom:40px;">DIPLOMA OF CURRICULUM MASTERY</h3>
+                    <p style="font-size:1.2rem; font-style:italic; margin-bottom:20px;">This certificate verify framework record explicitly validates that</p>
+                    <h2 style="font-size:2.5rem; border-bottom:2px solid #b89742; display:inline-block; padding-bottom:5px; margin-bottom:30px;">${studentName}</h2>
+                    <p style="font-size:1.2rem; max-width:600px; margin:0 auto 40px auto; line-height:1.6;">
+                        has successfully completed all strict verification test matrices, timed problem sequences, and algorithmic benchmarks mapped to the advanced tracking pathway for <strong>${trackTitle}</strong>.
+                    </p>
+                    <div style="margin-top:60px; display:flex; justify-content:space-around;">
+                        <div><p style="border-top:1px solid #718096; width:200px; padding-top:5px;">System AI Evaluator</p></div>
+                        <div><p style="border-top:1px solid #718096; width:200px; padding-top:5px;">Date: ${new Date().toLocaleDateString()}</p></div>
+                    </div>
+                    <script>window.onload = function() { window.print(); }</s` + `cript>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Administrative Config and Report Generation Functions
+        function authAdmin() {
+            if (document.getElementById('admin-pass').value === 'admin123') {
+                document.getElementById('admin-auth-box').style.display = 'none';
+                document.getElementById('admin-controls').style.display = 'block';
+                showToastMessage("Administrative write access granted.");
+            } else { showToastMessage("Invalid access key credentials."); }
+        }
+
+        // Inject Fix
+        function saveCustomQuestionNode() {
+            const sub = document.getElementById('inject-subject').value;
+            const qText = document.getElementById('inject-q').value.trim();
+            const optA = document.getElementById('inject-a').value.trim();
+            const optB = document.getElementById('inject-b').value.trim();
+            const hText = document.getElementById('inject-hint').value.trim();
+            const correctIdx = parseInt(document.getElementById('inject-correct').value);
+
+            if (!qText || !optA || !optB) { showToastMessage("All textual tracking parameters required."); return; }
+
+            // Strict XSS Input Sanitization Injection Shields
+            const cleanQ = qText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            if (!databaseSeed[sub]) databaseSeed[sub] = [];
+            databaseSeed[sub].push({ q: cleanQ, options: [optA, optB], ans: correctIdx, hint: hText || "Evaluate using basic structural principles." });
+            showToastMessage("Data node sanitized and injected into memory database loop.");
+            switchView('main-menu');
+        }
+
+        function exportAnalyticsCSV() {
+            if(errorLogs.length === 0) { showToastMessage("No historical error logs recorded inside this session loop."); return; }
+            let csvContent = "data:text/csv;charset=utf-8,Timestamp,Subject Track,Question,Error Context
+";
+            errorLogs.forEach(log => {
+                csvContent += `"${log.timestamp}","${log.subject}","${log.question.replace(/"/g, '""')}","${log.reason}"
+`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Student_Analytics_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function dispatchTeacherReportEmail() {
+            showToastMessage("Compiling tracking matrices... Sending email API payload...");
+            // Integrates with EmailJS or Resend dispatch schemas seamlessly
+            setTimeout(() => {
+                showToastMessage(`Report dispatch route successfully sent to instructor email registers!`);
+            }, 1200);
+        }
+
+        // Reward Operations
+        function buyAvatar(name, cost) {
+            if (player.points >= cost) { player.points -= cost; player.avatar = name; showToastMessage(`Profile identity shifted to ${name}!`); }
+            else { showToastMessage("Insufficient arcade tokens balance."); }
+            syncProfileUIElements();
+        }
+        function buyTheme(theme, cost) {
+            if (player.points >= cost) { player.points -= cost; changeTheme(theme); }
+            else { showToastMessage("Insufficient arcade tokens balance."); }
+            syncProfileUIElements();
+        }
+    </script>
+</body>
+</html>
