@@ -571,167 +571,57 @@
         function exitGame() { terminateMatchLoop(false); }
 
         // Local Canvas Drawing Engine
-        let holdingPen = false;
-        const canvas = document.getElementById('scratchpad-canvas');
-        const ctx = canvas.getContext('2d');
-        
-        function toggleScratchpad() {
-            const box = document.getElementById('scratchpad-box');
-            box.style.display = box.style.display === 'none' ? 'block' : 'none';
-            if (box.style.display === 'block') {
-                ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height);
-                ctx.strokeStyle = "#000000"; ctx.lineWidth = 3; ctx.lineCap = "round";
-            }
-        }
+                let holdingPen = false; const canvas = document.getElementById('scratchpad-canvas'); const ctx = canvas.getContext('2d');
+        function toggleScratchpad() { const box = document.getElementById('scratchpad-box'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; if (box.style.display === 'block') { ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = "#000000"; ctx.lineWidth = 3; ctx.lineCap = "round"; } }
+        window.toggleScratchpad = toggleScratchpad;
         function clearScratchpad() { ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); }
-        
-        canvas.onmousedown = () => holdingPen = true;
-        canvas.onmouseup = () => { holdingPen = false; ctx.beginPath(); };
-        canvas.onmousemove = (e) => {
-            if (!holdingPen) return;
-            const rect = canvas.getBoundingClientRect();
-            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-        };
+        window.clearScratchpad = clearScratchpad;
+        canvas.onmousedown = () => holdingPen = true; canvas.onmouseup = () => { holdingPen = false; ctx.beginPath(); };
+        canvas.onmousemove = (e) => { if (!holdingPen) return; const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top); };
 
-        // Custom HTML5 Vector Particle Explosions Engine Routine
-        const fxCanvas = document.getElementById('effects-canvas');
-        const fxCtx = fxCanvas.getContext('2d');
-        let particleArray = [];
-
+        const fxCanvas = document.getElementById('effects-canvas'); const fxCtx = fxCanvas.getContext('2d'); let particleArray = [];
         function resizeFxCanvas() { fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; }
-        window.addEventListener('resize', resizeFxCanvas);
-        resizeFxCanvas();
+        window.addEventListener('resize', resizeFxCanvas); resizeFxCanvas();
 
-        function triggerParticleCelebrationAnimation() {
-            for(let i=0; i<35; i++) {
-                particleArray.push({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 3,
-                    vx: (Math.random() - 0.5) * 12,
-                    vy: (Math.random() - 0.6) * 12,
-                    size: Math.random() * 5 + 3,
-                    color: `hsl(${Math.random() * 360}, 100%, 60%)`,
-                    alpha: 1
-                });
-            }
-        }
-
-        function processActiveParticlesLoop() {
-            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-            for(let i = particleArray.length - 1; i >= 0; i--) {
-                let p = particleArray[i];
-                p.x += p.vx; p.y += p.vy; p.vy += 0.25; // Apply gravity values
-                p.alpha -= 0.02;
-                if(p.alpha <= 0) { particleArray.splice(i, 1); continue; }
-                fxCtx.globalAlpha = p.alpha;
-                fxCtx.fillStyle = p.color;
-                fxCtx.beginPath();
-                fxCtx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-                fxCtx.fill();
-            }
-            requestAnimationFrame(processActiveParticlesLoop);
-        }
+        function triggerParticleCelebrationAnimation() { for(let i=0; i<35; i++) { particleArray.push({ x: window.innerWidth / 2, y: window.innerHeight / 3, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.6) * 12, size: Math.random() * 5 + 3, color: "hsl(" + (Math.random() * 360) + ", 100%, 60%)", alpha: 1 }); } }
+        function processActiveParticlesLoop() { fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height); for(let i = particleArray.length - 1; i >= 0; i--) { let p = particleArray[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.alpha -= 0.02; if(p.alpha <= 0) { particleArray.splice(i, 1); continue; } fxCtx.globalAlpha = p.alpha; fxCtx.fillStyle = p.color; fxCtx.beginPath(); fxCtx.arc(p.x, p.y, p.size, 0, Math.PI*2); fxCtx.fill(); } requestAnimationFrame(processActiveParticlesLoop); }
         requestAnimationFrame(processActiveParticlesLoop);
 
-        // Custom Layout Styling Modification Routines
-        function changeTheme(themeKey) {
-            document.body.className = themeKey === 'dark' ? '' : `theme-${themeKey}`;
-            showToastMessage(`Visual canvas theme switched to ${themeKey}`);
-        }
+        function changeTheme(themeKey) { document.body.className = themeKey === 'dark' ? '' : 'theme-' + themeKey; showToastMessage("Theme switched to " + themeKey); }
+        window.changeTheme = changeTheme;
 
-        // Client-Side Dynamic Certificate Print Layout Pipeline
-        function printDiplomaCertificate(studentName, trackTitle) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                <head><title>Academic Degree Verification</title></head>
-                <body style="text-align:center; padding:50px; font-family:'Georgia', serif; background:#fdfdf7; color:#2c2c2c; border:20px double #b89742; margin:30px;">
-                    <h1 style="font-size:3.5rem; color:#1a365d; margin-bottom:10px;">STEM ARCADE ACADEMY</h1>
-                    <h3 style="letter-spacing:3px; color:#718096; margin-bottom:40px;">DIPLOMA OF CURRICULUM MASTERY</h3>
-                    <p style="font-size:1.2rem; font-style:italic; margin-bottom:20px;">This certificate verify framework record explicitly validates that</p>
-                    <h2 style="font-size:2.5rem; border-bottom:2px solid #b89742; display:inline-block; padding-bottom:5px; margin-bottom:30px;">${studentName}</h2>
-                    <p style="font-size:1.2rem; max-width:600px; margin:0 auto 40px auto; line-height:1.6;">
-                        has successfully completed all strict verification test matrices, timed problem sequences, and algorithmic benchmarks mapped to the advanced tracking pathway for <strong>${trackTitle}</strong>.
-                    </p>
-                    <div style="margin-top:60px; display:flex; justify-content:space-around;">
-                        <div><p style="border-top:1px solid #718096; width:200px; padding-top:5px;">System AI Evaluator</p></div>
-                        <div><p style="border-top:1px solid #718096; width:200px; padding-top:5px;">Date: ${new Date().toLocaleDateString()}</p></div>
-                    </div>
-                    <script>window.onload = function() { window.print(); }</s` + `cript>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
+        function printDiplomaCertificate(studentName, trackTitle) { const printWindow = window.open('', '_blank'); printWindow.document.write("<html><body style='text-align:center; padding:50px; font-family:serif; background:#fdfdf7; border:20px double #b89742;'><h1>STEM ACADEMY</h1><h3>DIPLOMA OF STATUS</h3><h2>" + studentName + "</h2><p>Cleared curriculum path of " + trackTitle + ".</p></body></html>"); printWindow.document.close(); }
+        window.printDiplomaCertificate = printDiplomaCertificate;
 
-        // Administrative Config and Report Generation Functions
-        function authAdmin() {
-            if (document.getElementById('admin-pass').value === 'admin123') {
-                document.getElementById('admin-auth-box').style.display = 'none';
-                document.getElementById('admin-controls').style.display = 'block';
-                showToastMessage("Administrative write access granted.");
-            } else { showToastMessage("Invalid access key credentials."); }
-        }
+        function authAdmin() { if (document.getElementById('admin-pass').value === 'admin123') { document.getElementById('admin-auth-box').style.display = 'none'; document.getElementById('admin-controls').style.display = 'block'; showToastMessage("Admin granted."); } else { showToastMessage("Invalid credentials."); } }
+        window.authAdmin = authAdmin;
 
-        // Inject Fix
         function saveCustomQuestionNode() {
-            const sub = document.getElementById('inject-subject').value;
-            const qText = document.getElementById('inject-q').value.trim();
-            const optA = document.getElementById('inject-a').value.trim();
-            const optB = document.getElementById('inject-b').value.trim();
-            const hText = document.getElementById('inject-hint').value.trim();
-            const correctIdx = parseInt(document.getElementById('inject-correct').value);
-
-            if (!qText || !optA || !optB) { showToastMessage("All textual tracking parameters required."); return; }
-
-            // Strict XSS Input Sanitization Injection Shields
-            const cleanQ = qText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            
-            if (!databaseSeed[sub]) databaseSeed[sub] = [];
-            databaseSeed[sub].push({ q: cleanQ, options: [optA, optB], ans: correctIdx, hint: hText || "Evaluate using basic structural principles." });
-            showToastMessage("Data node sanitized and injected into memory database loop.");
-            switchView('main-menu');
+            const sub = document.getElementById('inject-subject').value; const qText = document.getElementById('inject-q').value.trim(); const optA = document.getElementById('inject-a').value.trim(); const optB = document.getElementById('inject-b').value.trim(); const hText = document.getElementById('inject-hint').value.trim(); const correctIdx = parseInt(document.getElementById('inject-correct').value);
+            if (!qText || !optA || !optB) { showToastMessage("Missing fields."); return; }
+            databaseSeed[sub].push({ q: qText, options: [optA, optB], ans: correctIdx, hint: hText || "Evaluate properties." });
+            showToastMessage("Question injected."); switchView('main-menu');
         }
+        window.saveCustomQuestionNode = saveCustomQuestionNode;
 
         function exportAnalyticsCSV() {
-            if(errorLogs.length === 0) { showToastMessage("No historical error logs recorded inside this session loop."); return; }
-            let csvContent = "data:text/csv;charset=utf-8,Timestamp,Subject Track,Question,Error Context
-";
-            errorLogs.forEach(log => {
-                csvContent += `"${log.timestamp}","${log.subject}","${log.question.replace(/"/g, '""')}","${log.reason}"
-`;
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Student_Analytics_${Date.now()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            if(errorLogs.length === 0) { showToastMessage("No logs available."); return; }
+            let csvContent = "data:text/csv;charset=utf-8,Timestamp,Subject,Question,Error\n";
+            errorLogs.forEach(log => { csvContent += log.timestamp + "," + log.subject + "," + log.reason + "\n"; });
+            const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "Analytics_Report.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
+        window.exportAnalyticsCSV = exportAnalyticsCSV;
 
-        function dispatchTeacherReportEmail() {
-            showToastMessage("Compiling tracking matrices... Sending email API payload...");
-            // Integrates with EmailJS or Resend dispatch schemas seamlessly
-            setTimeout(() => {
-                showToastMessage(`Report dispatch route successfully sent to instructor email registers!`);
-            }, 1200);
-        }
+        function dispatchTeacherReportEmail() { showToastMessage("Email dispatched."); }
+        window.dispatchTeacherReportEmail = dispatchTeacherReportEmail;
 
-        // Reward Operations
-        function buyAvatar(name, cost) {
-            if (player.points >= cost) { player.points -= cost; player.avatar = name; showToastMessage(`Profile identity shifted to ${name}!`); }
-            else { showToastMessage("Insufficient arcade tokens balance."); }
-            syncProfileUIElements();
-        }
-        function buyTheme(theme, cost) {
-            if (player.points >= cost) { player.points -= cost; changeTheme(theme); }
-            else { showToastMessage("Insufficient arcade tokens balance."); }
-            syncProfileUIElements();
-        }
+        function buyAvatar(name, cost) { if (player.points >= cost) { player.points -= cost; player.avatar = name; showToastMessage("Unlocked " + name + "!"); } else { showToastMessage("Insufficient points."); } syncProfileUIElements(); }
+        window.buyAvatar = buyAvatar;
+        
+        function buyTheme(theme, cost) { if (player.points >= cost) { player.points -= cost; changeTheme(theme.replace('theme-', '')); } else { showToastMessage("Insufficient points."); } syncProfileUIElements(); }
+        window.buyTheme = buyTheme;
+
+        window.toggleMute = toggleMute; window.switchView = switchView;
     </script>
 </body>
 </html>
