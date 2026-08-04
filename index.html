@@ -15,7 +15,7 @@
       <span id="heart-tag" class="stat-pill">❤️ 5</span>
       <span id="xp-tag" class="stat-pill">⚡ 0 XP</span>
       <button id="top-profile-btn" class="top-profile-btn" data-view="profile-view" aria-label="Open profile">
-        <span class="top-profile-icon">👤</span>
+        <span id="top-profile-avatar" class="top-profile-icon">🧑‍🚀</span>
         <span id="top-profile-level">Lvl 1</span>
       </button>
     </div>
@@ -38,7 +38,7 @@
     <section id="home-view" class="view">
       <div class="dashboard-grid">
         <aside class="side-card panel">
-          <button class="profile-orb profile-home-button" data-view="profile-view" aria-label="Open your profile">👤</button>
+          <button class="profile-orb profile-home-button" data-view="profile-view" aria-label="Open your profile"><span data-player-avatar>🧑‍🚀</span></button>
           <h2 id="welcome-name">Welcome!</h2>
           <p id="level-copy" class="muted">Level 1 learner</p>
           <div class="level-track"><div id="level-fill"></div></div>
@@ -230,12 +230,18 @@
 
     <section id="profile-view" class="view">
       <div class="panel content-panel profile-page">
+        <button class="profile-sticky-back btn secondary" data-view="home-view" aria-label="Back to learning path">← Back</button>
         <div class="profile-header-card">
-          <div id="profile-avatar" class="large-profile-avatar">🎓</div>
+          <div class="profile-avatar-wrap">
+            <div id="profile-avatar" class="large-profile-avatar">🧑‍🚀</div>
+            <button id="edit-avatar-btn" class="avatar-edit-btn" aria-label="Change profile picture" title="Change profile picture">✎</button>
+          </div>
           <div class="profile-header-copy">
             <p class="eyebrow">YOUR PROFILE</p>
             <h1 id="profile-display-name">Learner</h1>
             <p id="profile-account-type" class="muted">Local account</p>
+            <p id="profile-bio-display" class="profile-bio muted">No description added yet.</p>
+            <p id="profile-region-display" class="profile-region tiny muted">📍 Region hidden</p>
             <div class="profile-level-row">
               <span id="profile-level-badge" class="badge">Level 1</span>
               <span id="profile-xp-copy" class="muted">0 total XP</span>
@@ -252,12 +258,40 @@
 
         <div class="profile-section">
           <p class="eyebrow">PROFILE DETAILS</p>
-          <h2>Display name</h2>
-          <p class="muted">Use a nickname rather than your full real name.</p>
-          <div class="profile-name-row">
-            <input id="profile-name-input" class="field" type="text" maxlength="24" placeholder="Display nickname">
-            <button id="save-profile-btn" class="btn primary">Save name</button>
+          <h2>About you</h2>
+          <p class="muted">Use a nickname and avoid private details such as your school or address.</p>
+          <div class="profile-details-grid">
+            <label class="setting-field">Display name
+              <input id="profile-name-input" class="field" type="text" maxlength="24" placeholder="Display nickname">
+            </label>
+            <label class="setting-field profile-bio-field">Description
+              <textarea id="profile-bio-input" class="field" maxlength="160" rows="3" placeholder="Example: I enjoy maths, coding and space."></textarea>
+            </label>
+            <label class="setting-field">Region
+              <select id="profile-region-select" class="field">
+                <option value="hidden">No country / not visible</option>
+                <option value="Australia">Australia</option>
+                <option value="New Zealand">New Zealand</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="United States">United States</option>
+                <option value="Canada">Canada</option>
+                <option value="Europe">Europe</option>
+                <option value="Asia">Asia</option>
+                <option value="Africa">Africa</option>
+                <option value="South America">South America</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label class="toggle-line profile-region-toggle"><input id="profile-region-visible" type="checkbox"> Show my region on my profile</label>
           </div>
+          <button id="save-profile-btn" class="btn primary">Save profile</button>
+        </div>
+
+        <div class="profile-section future-social-card">
+          <p class="eyebrow">SOCIAL — FUTURE UPDATE</p>
+          <h2>Friends and study groups</h2>
+          <p class="muted">A future update can add friend requests, private study groups and shared progress challenges. This is intentionally disabled until privacy controls and moderation are ready.</p>
+          <button class="btn secondary" disabled>Friends coming later</button>
         </div>
 
         <div class="profile-section">
@@ -359,3 +393,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+
