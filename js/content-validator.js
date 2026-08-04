@@ -174,3 +174,4 @@ export function validateContent(courses) {
   report.valid = report.errors.length === 0;
   return report;
 }
+
