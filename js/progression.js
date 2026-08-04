@@ -62,3 +62,4 @@ export function calculatorUnlocks(player, getMastery) {
     graphing: getMastery('expanding') >= 70 || player.placementCompleted
   };
 }
+
