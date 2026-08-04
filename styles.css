@@ -279,3 +279,53 @@ body[data-font-size="extra-large"] { font-size: 20px; }
   .profile-home-button { width: 92px; height: 92px; font-size: 48px; }
   .interactive-bar-row { grid-template-columns: 70px 1fr 38px; }
 }
+
+/* v9 interactive lesson library */
+.interactive-lesson { margin-top: 22px; padding: 20px; border: 2px solid var(--line); border-radius: 20px; background: color-mix(in srgb, var(--card) 92%, var(--primary) 8%); overflow: hidden; }
+.interactive-lesson-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:16px; }
+.interactive-instructions { margin:6px 0 0; }
+.interactive-control { display:grid; gap:8px; margin:12px 0; font-weight:800; }
+.interactive-control-row { display:grid; grid-template-columns:minmax(0,1fr) 52px; gap:12px; align-items:center; }
+.interactive-control input[type="range"] { width:100%; accent-color:var(--primary); }
+.interactive-control output { border:2px solid var(--line); border-radius:10px; padding:6px; text-align:center; background:var(--card); }
+.interactive-result { margin-top:16px; padding:12px 16px; border-radius:14px; background:var(--primary-soft); font-weight:900; text-align:center; }
+.interactive-bars, .fraction-controls { display:grid; gap:14px; }
+.interactive-bar-track { height:14px; border-radius:999px; background:var(--line); overflow:hidden; }
+.interactive-bar-fill { height:100%; width:0; border-radius:inherit; background:var(--primary); transition:width .18s ease; }
+.interactive-number-line { position:relative; height:92px; margin:30px 20px 12px; border-top:4px solid var(--text); }
+.interactive-number-line-tick { position:absolute; top:-8px; transform:translateX(-50%); padding-top:22px; font-size:.76rem; }
+.interactive-number-line-tick::before { content:""; position:absolute; top:0; left:50%; width:2px; height:14px; background:var(--text); }
+.interactive-number-marker { position:absolute; top:-22px; transform:translateX(-50%); color:var(--primary); font-size:1.4rem; transition:left .18s ease; }
+.interactive-number-jump { position:absolute; top:-34px; height:24px; border:3px solid var(--primary); border-bottom:0; border-radius:30px 30px 0 0; transition:left .18s ease,width .18s ease; }
+.place-value-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.place-value-column { border:2px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center; background:var(--card); }
+.place-value-digit { display:block; font-size:2rem; font-weight:900; margin:8px; color:var(--primary); }
+.place-value-blocks { display:flex; flex-wrap:wrap; justify-content:center; gap:3px; min-height:25px; }
+.place-value-blocks i { width:8px; height:8px; border-radius:2px; background:var(--primary); }
+.fraction-control-group { border-bottom:1px solid var(--line); padding-bottom:8px; }
+.fraction-bars { display:grid; gap:14px; margin-top:16px; }
+.fraction-bar-row { display:grid; grid-template-columns:60px 1fr; align-items:center; gap:12px; }
+.fraction-bar { display:grid; min-height:48px; border:2px solid var(--text); border-radius:10px; overflow:hidden; }
+.fraction-bar span { border-right:1px solid var(--text); background:var(--card); }
+.fraction-bar span:last-child { border-right:0; }
+.fraction-bar span.filled { background:var(--primary); }
+.balance-scale { height:190px; position:relative; margin:14px auto; max-width:460px; }
+.balance-beam { position:absolute; left:10%; right:10%; top:55px; height:8px; border-radius:999px; background:var(--text); transform-origin:center; transition:transform .22s ease; }
+.balance-pan { position:absolute; top:10px; width:74px; height:56px; border:3px solid var(--primary); border-top:0; border-radius:0 0 40px 40px; display:grid; place-items:center; font-weight:900; background:var(--card); }
+.left-pan { left:-18px; } .right-pan { right:-18px; }
+.balance-pan::before { content:""; position:absolute; left:50%; bottom:100%; height:42px; border-left:2px solid var(--text); }
+.balance-pivot { position:absolute; left:50%; top:66px; transform:translateX(-50%); font-size:4rem; color:var(--primary); }
+.area-model-grid { display:grid; gap:3px; width:min(100%,420px); aspect-ratio:1.5; margin:18px auto; }
+.area-model-grid span { border:1px solid var(--primary); border-radius:3px; background:color-mix(in srgb,var(--primary) 28%,var(--card)); }
+.coordinate-grid,.angle-explorer,.function-graph { display:block; width:100%; max-height:360px; margin:14px auto; border:2px solid var(--line); border-radius:14px; background:var(--card); }
+.grid-line { stroke:var(--line); stroke-width:1; } .axis { stroke:var(--text); stroke-width:2; }
+.coordinate-point { fill:var(--primary); stroke:var(--card); stroke-width:3; }
+.coordinate-label,.angle-label { fill:var(--text); font-weight:900; font-size:16px; }
+.angle-ray { stroke:var(--text); stroke-width:6; stroke-linecap:round; } .angle-ray.active,.angle-arc { stroke:var(--primary); fill:none; stroke-width:5; }
+.function-line { stroke:var(--primary); stroke-width:5; stroke-linecap:round; }
+.probability-spinner { position:relative; width:230px; height:250px; margin:10px auto; }
+.spinner-wheel { position:absolute; inset:20px 10px 10px; border:7px solid var(--text); border-radius:50%; background:conic-gradient(from 0deg,var(--primary-soft),var(--primary),var(--primary-soft)); transition:transform 1.2s cubic-bezier(.2,.8,.2,1); }
+.spinner-wheel span { position:absolute; left:50%; top:50%; transform:rotate(calc(var(--i) * (360deg / var(--segments)))) translateY(-82px) rotate(calc(var(--i) * (-360deg / var(--segments)))); transform-origin:0 0; font-weight:900; }
+.spinner-pointer { position:absolute; left:50%; top:0; transform:translateX(-50%); z-index:2; font-size:2rem; color:var(--danger); }
+.reduced-motion .interactive-bar-fill,.reduced-motion .interactive-number-marker,.reduced-motion .interactive-number-jump,.reduced-motion .balance-beam,.reduced-motion .spinner-wheel { transition:none !important; }
+@media (max-width:640px) { .interactive-lesson { padding:15px; } .interactive-lesson-head { flex-direction:column; } .place-value-grid { grid-template-columns:repeat(2,1fr); } .fraction-bar-row { grid-template-columns:1fr; } .coordinate-grid,.angle-explorer,.function-graph { max-height:270px; } }
