@@ -20,12 +20,28 @@ window.STEM_COURSES = {
               {
                 "title": "Combining quantities",
                 "body": "Addition joins quantities to find a total.",
-                "example": "3 + 4 = 7 means three items combined with four items make seven."
+                "example": "3 + 4 = 7 means three items combined with four items make seven.",
+                "interactive": {
+                  "type": "quantity-bars",
+                  "title": "Build the total",
+                  "labels": ["First group", "Second group"],
+                  "values": [3, 4],
+                  "min": 0,
+                  "max": 10
+                }
               },
               {
                 "title": "Number-line jumps",
                 "body": "Move right on a number line when adding positive numbers.",
-                "example": "Start at 6 and move three steps right to reach 9."
+                "example": "Start at 6 and move three steps right to reach 9.",
+                "interactive": {
+                  "type": "number-line",
+                  "title": "Move along the number line",
+                  "min": 0,
+                  "max": 12,
+                  "start": 6,
+                  "step": 3
+                }
               },
               {
                 "title": "Order does not change the total",
