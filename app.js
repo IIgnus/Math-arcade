@@ -107,7 +107,11 @@ const DEFAULT_PLAYER = {
     theme: 'quest',
     timer: 0,
     sound: true,
-    reducedMotion: false
+    reducedMotion: false,
+    fontSize: 'normal',
+    highContrast: false,
+    extraTime: false,
+    speechRate: 1
   }
 };
 
@@ -418,6 +422,10 @@ function syncUI() {
 
   $('xp-tag').textContent =
     `⚡ ${player.xp || 0} XP`;
+
+  if ($('top-profile-level')) {
+    $('top-profile-level').textContent = `Lvl ${player.level}`;
+  }
 
   $('welcome-name').textContent =
     `Hi, ${player.name}!`;
@@ -994,6 +1002,8 @@ function renderQuestion() {
   const question =
     session.questions[session.index];
 
+  $('question-counter').textContent = `${session.index + 1} / ${session.questions.length}`;
+
   $('question-progress').style.width =
     `${
       (
@@ -1039,83 +1049,55 @@ function renderQuestion() {
 
   renderAnswer(question);
 
-  startTimer(
-    session.config.timer || 0
-  );
+  const baseTimer = session.config.timer || 0;
+  startTimer(player.settings.extraTime && baseTimer ? Math.ceil(baseTimer * 1.5) : baseTimer);
+}
+
+function parseAnswerInput(raw, question) {
+  const text = String(raw ?? '').trim();
+  if (!text) return { empty: true, value: null };
+  if (question.type === 'text') return { empty: false, value: text };
+  if (text.includes('/')) {
+    const [a, b] = text.split('/').map(Number);
+    if (Number.isFinite(a) && Number.isFinite(b) && b !== 0) return { empty: false, value: a / b };
+  }
+  const value = Number(text);
+  return { empty: !Number.isFinite(value), value };
 }
 
 function renderAnswer(question) {
   const area = $('answer-area');
-
   area.innerHTML = '';
 
   if (question.type === 'choice') {
-    question.options.forEach(
-      (option, index) => {
-        const button =
-          document.createElement('button');
-
-        button.className = 'option';
-
-        button.innerHTML = `
-          <span class="option-key">
-            ${String.fromCharCode(
-              65 + index
-            )}
-          </span>
-
-          <span>
-            ${escapeHtml(option)}
-          </span>
-        `;
-
-        button.onclick = () => {
-          gradeAnswer(
-            index,
-            button
-          );
-        };
-
-        area.appendChild(button);
-      }
-    );
-  } else {
-    area.innerHTML = `
-      <div class="answer-input-row">
-        <input
-          id="number-answer"
-          class="field"
-          type="number"
-          inputmode="decimal"
-          placeholder="Type your answer"
-        >
-
-        <button
-          id="submit-number"
-          class="btn primary"
-        >
-          Check
-        </button>
-      </div>
-    `;
-
-    $('submit-number').onclick = () => {
-      gradeAnswer(
-        Number(
-          $('number-answer').value
-        ),
-        $('submit-number')
-      );
-    };
-
-    $('number-answer').onkeydown = event => {
-      if (event.key === 'Enter') {
-        $('submit-number').click();
-      }
-    };
-
-    $('number-answer').focus();
+    const choices = question.options.map((option, originalIndex) => ({ option, originalIndex }));
+    if (question.randomizeOptions !== false) choices.sort(() => Math.random() - 0.5);
+    choices.forEach(({ option, originalIndex }, index) => {
+      const button = document.createElement('button');
+      button.className = 'option lively-control';
+      button.innerHTML = `<span class="option-key">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(option)}</span>`;
+      button.onclick = () => gradeAnswer(originalIndex, button);
+      area.appendChild(button);
+    });
+    return;
   }
+
+  const isText = question.type === 'text';
+  area.innerHTML = `
+    <div class="answer-input-row">
+      <input id="answer-input" class="field" type="text" inputmode="${isText ? 'text' : 'decimal'}"
+        placeholder="${isText ? 'Type your answer' : 'Type a number or fraction, e.g. 3/4'}">
+      <button id="submit-answer" class="btn primary">Check</button>
+    </div>`;
+
+  const submit = () => {
+    const parsed = parseAnswerInput($('answer-input').value, question);
+    if (parsed.empty) { toast('Enter an answer first.'); $('answer-input').focus(); return; }
+    gradeAnswer(parsed.value, $('submit-answer'));
+  };
+  $('submit-answer').onclick = submit;
+  $('answer-input').onkeydown = event => { if (event.key === 'Enter') submit(); };
+  $('answer-input').focus();
 }
 
 function startTimer(seconds) {
@@ -1264,6 +1246,7 @@ function gradeAnswer(
 
         ${escapeHtml(question.hint)}
       </p>
+      ${question.commonMistake ? `<p class="common-mistake"><strong>Common mistake:</strong> ${escapeHtml(question.commonMistake)}</p>` : ''}
     `;
 
     if (
@@ -1443,12 +1426,23 @@ $('read-btn').onclick = () => {
   if ('speechSynthesis' in window) {
     speechSynthesis.cancel();
 
-    speechSynthesis.speak(
-      new SpeechSynthesisUtterance(
-        $('question-text').textContent
-      )
-    );
+    const utterance = new SpeechSynthesisUtterance($('question-text').textContent);
+    utterance.rate = Number(player.settings.speechRate || 1);
+    speechSynthesis.speak(utterance);
   }
+};
+
+
+let pausedTimeLeft = 0;
+$('pause-btn').onclick = () => {
+  if (session.answered) return;
+  pausedTimeLeft = session.timeLeft;
+  clearInterval(session.timer);
+  $('pause-overlay').classList.remove('hidden');
+};
+$('resume-btn').onclick = () => {
+  $('pause-overlay').classList.add('hidden');
+  if (pausedTimeLeft > 0) startTimer(pausedTimeLeft);
 };
 
 function finishSession() {
@@ -2102,18 +2096,16 @@ async function loadLeaderboard() {
 $('save-settings-btn').onclick = () => {
   player.settings = {
     theme: $('theme-select').value,
-    timer: Number(
-      $('timer-select').value
-    ),
-    sound:
-      $('sound-toggle').checked,
-    reducedMotion:
-      $('reduced-motion-toggle').checked
+    timer: Number($('timer-select').value),
+    sound: $('sound-toggle').checked,
+    reducedMotion: $('reduced-motion-toggle').checked,
+    fontSize: $('font-size-select').value,
+    highContrast: $('high-contrast-toggle').checked,
+    extraTime: $('extra-time-toggle').checked,
+    speechRate: Number($('speech-rate-select').value)
   };
-
   applySettings();
   savePlayer();
-
   toast('Settings saved.');
 };
 
@@ -2375,31 +2367,23 @@ $('theme-select').onchange = () => {
 };
 
 function applySettings() {
-  document.body.className =
-    player.settings.theme === 'quest'
-      ? ''
-      : `theme-${player.settings.theme}`;
+  const themeClasses = ['theme-ocean', 'theme-night', 'theme-light'];
+  document.body.classList.remove(...themeClasses);
+  if (player.settings.theme && player.settings.theme !== 'quest') {
+    document.body.classList.add(`theme-${player.settings.theme}`);
+  }
+  document.body.classList.toggle('reduced-motion', Boolean(player.settings.reducedMotion));
+  document.body.classList.toggle('high-contrast', Boolean(player.settings.highContrast));
+  document.body.dataset.fontSize = player.settings.fontSize || 'normal';
 
-  document.body.classList.toggle(
-    'reduced-motion',
-    Boolean(
-      player.settings.reducedMotion
-    )
-  );
-
-  $('theme-select').value =
-    player.settings.theme || 'quest';
-
-  $('timer-select').value =
-    String(player.settings.timer || 0);
-
-  $('sound-toggle').checked =
-    player.settings.sound !== false;
-
-  $('reduced-motion-toggle').checked =
-    Boolean(
-      player.settings.reducedMotion
-    );
+  $('theme-select').value = player.settings.theme || 'quest';
+  $('timer-select').value = String(player.settings.timer || 0);
+  $('sound-toggle').checked = player.settings.sound !== false;
+  $('reduced-motion-toggle').checked = Boolean(player.settings.reducedMotion);
+  $('font-size-select').value = player.settings.fontSize || 'normal';
+  $('high-contrast-toggle').checked = Boolean(player.settings.highContrast);
+  $('extra-time-toggle').checked = Boolean(player.settings.extraTime);
+  $('speech-rate-select').value = String(player.settings.speechRate || 1);
 }
 
 const scratchpad = createScratchpad({ $ });
@@ -2570,4 +2554,3 @@ window.addEventListener('pagehide', () => {
 });
 
 syncUI();
-
