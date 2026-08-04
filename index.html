@@ -14,6 +14,10 @@
       <span id="streak-tag" class="stat-pill">🔥 0</span>
       <span id="heart-tag" class="stat-pill">❤️ 5</span>
       <span id="xp-tag" class="stat-pill">⚡ 0 XP</span>
+      <button id="top-profile-btn" class="top-profile-btn" data-view="profile-view" aria-label="Open profile">
+        <span class="top-profile-icon">👤</span>
+        <span id="top-profile-level">Lvl 1</span>
+      </button>
     </div>
   </header>
 
@@ -34,7 +38,7 @@
     <section id="home-view" class="view">
       <div class="dashboard-grid">
         <aside class="side-card panel">
-          <div class="profile-orb">🎓</div>
+          <button class="profile-orb profile-home-button" data-view="profile-view" aria-label="Open your profile">👤</button>
           <h2 id="welcome-name">Welcome!</h2>
           <p id="level-copy" class="muted">Level 1 learner</p>
           <div class="level-track"><div id="level-fill"></div></div>
@@ -93,6 +97,8 @@
         <div class="quiz-top">
           <button id="exit-btn" class="icon-btn">✕</button>
           <div class="quiz-progress"><div id="question-progress"></div></div>
+          <span id="question-counter" class="badge">1 / 1</span>
+          <button id="pause-btn" class="icon-btn" aria-label="Pause quiz">⏸</button>
           <span id="quiz-hearts">❤️ 5</span>
         </div>
 
@@ -277,8 +283,20 @@
               <option value="0">Off</option><option value="60">60 seconds</option><option value="45">45 seconds</option><option value="30">30 seconds</option>
             </select>
           </label>
+          <label class="setting-field">Text size
+            <select id="font-size-select" class="field">
+              <option value="small">Small</option><option value="normal">Normal</option><option value="large">Large</option><option value="extra-large">Extra large</option>
+            </select>
+          </label>
+          <label class="setting-field">Read-aloud speed
+            <select id="speech-rate-select" class="field">
+              <option value="0.75">Slower</option><option value="1">Normal</option><option value="1.25">Faster</option>
+            </select>
+          </label>
           <label class="toggle-line"><input id="sound-toggle" type="checkbox" checked> Sound effects and text-to-speech</label>
           <label class="toggle-line"><input id="reduced-motion-toggle" type="checkbox"> Reduce animations</label>
+          <label class="toggle-line"><input id="high-contrast-toggle" type="checkbox"> High contrast</label>
+          <label class="toggle-line"><input id="extra-time-toggle" type="checkbox"> Extra time on timed questions</label>
           <button id="save-settings-btn" class="btn primary">Save settings</button>
         </div>
 
@@ -323,6 +341,16 @@
     <button data-view="tournament-view">🏆<span>League</span></button>
     <button data-view="profile-view">👤<span>Profile</span></button>
   </nav>
+
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="modal-card pause-card">
+      <div class="confirmation-icon">⏸</div>
+      <p class="eyebrow">QUIZ PAUSED</p>
+      <h2>Take a breather</h2>
+      <p class="muted">Your answer and remaining time are waiting for you.</p>
+      <button id="resume-btn" class="btn primary wide">Resume quiz</button>
+    </div>
+  </div>
 
   <div id="overlay" class="overlay hidden"><div class="modal panel"><div id="overlay-content"></div><button id="overlay-close" class="btn primary wide">Close</button></div></div>
   <div id="toast" class="toast hidden"></div>
