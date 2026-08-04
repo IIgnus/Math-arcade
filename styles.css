@@ -41,3 +41,81 @@ body.theme-light{--bg:#fff;--panel:#fff;--panel-soft:#f7f7f7}
 /* Content loader and validation status */
 .content-ok{border-color:var(--primary);background:rgba(88,204,2,.08)}
 .content-error{border-color:var(--danger);background:rgba(248,113,113,.08)}
+
+/* STEM Quest v6: reliability and system status UI */
+.save-status {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1200;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.save-status.saving::before {
+  content: '⏳ ';
+}
+
+.save-status.saved::before {
+  content: '✅ ';
+}
+
+.save-status.error::before {
+  content: '⚠️ ';
+}
+
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 18, 30, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.app-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 4px solid var(--line);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: stem-loading-spin 0.75s linear infinite;
+}
+
+@keyframes stem-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.reduced-motion .loading-spinner {
+  animation-duration: 1.8s;
+}
+
+.fatal-error-card {
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .save-status {
+    top: auto;
+    right: 12px;
+    bottom: 82px;
+  }
+}
