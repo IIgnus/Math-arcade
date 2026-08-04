@@ -69,4 +69,3 @@ export function formatContentReport(report) {
   const { courses, topics, lessons, questions } = report.counts;
   return `${courses} courses · ${topics} topics · ${lessons} lessons · ${questions} questions · ${report.errors.length} errors · ${report.warnings.length} warnings`;
 }
-
