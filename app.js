@@ -30,6 +30,7 @@ import { createAppState } from './js/app-state.js';
 import { createNavigation } from './js/navigation.js';
 import { createSaveService } from './js/save-service.js';
 import { createErrorHandler } from './js/error-handler.js';
+import { renderInteractiveLesson } from './js/interactive-lessons.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -83,6 +84,10 @@ function updateSaveStatus({ state }) {
 const DEFAULT_PLAYER = {
   schemaVersion: 2,
   name: 'Guest',
+  avatar: '🧑‍🚀',
+  bio: '',
+  region: 'hidden',
+  regionVisible: false,
   xp: 0,
   level: 1,
   points: 0,
@@ -205,7 +210,11 @@ function mergePlayer(raw = {}) {
     ...(raw.settings || {})
   };
 
-  merged.dailyScores ||= {};
+  merged.avatar ||= DEFAULT_PLAYER.avatar;
+  merged.bio = typeof merged.bio === 'string' ? merged.bio : '';
+  merged.region ||= 'hidden';
+  merged.regionVisible = Boolean(merged.regionVisible);
+    merged.dailyScores ||= {};
   merged.dailyActivity ||= {};
   merged.mastery ||= {};
   merged.attempts ||= {};
@@ -426,6 +435,11 @@ function syncUI() {
   if ($('top-profile-level')) {
     $('top-profile-level').textContent = `Lvl ${player.level}`;
   }
+
+  if ($('top-profile-avatar')) $('top-profile-avatar').textContent = player.avatar || DEFAULT_PLAYER.avatar;
+  document.querySelectorAll('[data-player-avatar]').forEach(element => {
+    element.textContent = player.avatar || DEFAULT_PLAYER.avatar;
+  });
 
   $('welcome-name').textContent =
     `Hi, ${player.name}!`;
@@ -901,6 +915,12 @@ function renderLessonPage() {
       </p>
     </div>
   `;
+
+  renderInteractiveLesson({
+    container: $('lesson-content'),
+    interactive: page.interactive,
+    reducedMotion: Boolean(player.settings.reducedMotion)
+  });
 
   $('lesson-prev-btn').disabled =
     lessonPageIndex === 0;
@@ -2150,6 +2170,15 @@ function renderProfile() {
   $('profile-display-name').textContent =
     player.name || 'Learner';
 
+  $('profile-avatar').textContent = player.avatar || DEFAULT_PLAYER.avatar;
+  if ($('profile-bio-display')) {
+    $('profile-bio-display').textContent = player.bio || 'No description added yet.';
+  }
+  if ($('profile-region-display')) {
+    const visibleRegion = player.regionVisible && player.region !== 'hidden';
+    $('profile-region-display').textContent = visibleRegion ? `📍 ${player.region}` : '📍 Region hidden';
+  }
+
   $('profile-account-type').textContent =
     accountType;
 
@@ -2173,6 +2202,10 @@ function renderProfile() {
 
   $('profile-name-input').value =
     player.name || '';
+
+  if ($('profile-bio-input')) $('profile-bio-input').value = player.bio || '';
+  if ($('profile-region-select')) $('profile-region-select').value = player.region || 'hidden';
+  if ($('profile-region-visible')) $('profile-region-visible').checked = Boolean(player.regionVisible);
 
   $('profile-save-description').textContent =
     firebaseUser
@@ -2219,6 +2252,9 @@ $('save-profile-btn').onclick = async () => {
   }
 
   player.name = newName;
+  player.bio = ($('profile-bio-input')?.value || '').trim().slice(0, 160);
+  player.region = $('profile-region-select')?.value || 'hidden';
+  player.regionVisible = Boolean($('profile-region-visible')?.checked) && player.region !== 'hidden';
 
   await savePlayer();
 
@@ -2227,6 +2263,41 @@ $('save-profile-btn').onclick = async () => {
 
   toast('Profile name saved.');
 };
+
+
+const PROFILE_AVATARS = [
+  '🧑‍🚀', '🧙', '🦉', '🤖', '🐼', '🐯',
+  '🦊', '🐸', '🐙', '🦄', '🐲', '🌟'
+];
+
+if ($('edit-avatar-btn')) {
+  $('edit-avatar-btn').onclick = () => {
+    modal(`
+      <div class="avatar-picker-modal">
+        <p class="eyebrow">PROFILE PICTURE</p>
+        <h2>Choose your avatar</h2>
+        <p class="muted">You can change this at any time.</p>
+        <div class="avatar-choice-grid">
+          ${PROFILE_AVATARS.map(avatar => `
+            <button class="avatar-choice ${avatar === player.avatar ? 'selected' : ''}" data-avatar-choice="${avatar}" aria-label="Choose ${avatar}">${avatar}</button>
+          `).join('')}
+        </div>
+      </div>
+    `);
+
+    document.querySelectorAll('[data-avatar-choice]').forEach(button => {
+      button.onclick = async () => {
+        player.avatar = button.dataset.avatarChoice;
+        await savePlayer();
+        closeAppModal();
+        syncUI();
+        renderProfile();
+        renderHome();
+        toast('Profile picture updated.');
+      };
+    });
+  };
+}
 
 $('profile-logout-btn').onclick = () => {
   showLogoutConfirmation();
