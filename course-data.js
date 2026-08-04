@@ -24,8 +24,14 @@ window.STEM_COURSES = {
                 "interactive": {
                   "type": "quantity-bars",
                   "title": "Build the total",
-                  "labels": ["First group", "Second group"],
-                  "values": [3, 4],
+                  "labels": [
+                    "First group",
+                    "Second group"
+                  ],
+                  "values": [
+                    3,
+                    4
+                  ],
                   "min": 0,
                   "max": 10
                 }
@@ -121,7 +127,14 @@ window.STEM_COURSES = {
               {
                 "title": "Ones, tens and hundreds",
                 "body": "Digits have values based on position.",
-                "example": "In 243, the digits mean 200, 40 and 3."
+                "example": "In 243, the digits mean 200, 40 and 3.",
+                "interactive": {
+                  "type": "place-value",
+                  "title": "Build a number by place value",
+                  "instructions": "Move the slider and watch each digit split into thousands, hundreds, tens and ones.",
+                  "value": 347,
+                  "max": 9999
+                }
               },
               {
                 "title": "Line up place values",
@@ -470,7 +483,16 @@ window.STEM_COURSES = {
               {
                 "title": "Finding a difference",
                 "body": "Subtraction compares or removes quantities.",
-                "example": "9 − 4 = 5."
+                "example": "9 − 4 = 5.",
+                "interactive": {
+                  "type": "number-line",
+                  "title": "Subtract with a number line",
+                  "instructions": "Choose a negative jump to move left.",
+                  "min": 0,
+                  "max": 20,
+                  "start": 14,
+                  "step": -6
+                }
               },
               {
                 "title": "Number-line movement",
@@ -893,7 +915,16 @@ window.STEM_COURSES = {
               {
                 "title": "Equal groups",
                 "body": "Multiplication counts equal groups efficiently.",
-                "example": "4 groups of 3 equals 4 × 3 = 12."
+                "example": "4 groups of 3 equals 4 × 3 = 12.",
+                "interactive": {
+                  "type": "area-model",
+                  "title": "Build an array",
+                  "instructions": "Change the rows and columns to see multiplication as area.",
+                  "width": 4,
+                  "height": 3,
+                  "widthLabel": "Columns",
+                  "heightLabel": "Rows"
+                }
               },
               {
                 "title": "Arrays",
@@ -1310,7 +1341,22 @@ window.STEM_COURSES = {
               {
                 "title": "Share equally",
                 "body": "Division splits a total into equal groups.",
-                "example": "20 ÷ 5 = 4."
+                "example": "20 ÷ 5 = 4.",
+                "interactive": {
+                  "type": "quantity-bars",
+                  "title": "Compare equal groups",
+                  "instructions": "Adjust the groups and discuss when they can be shared equally.",
+                  "labels": [
+                    "Objects",
+                    "Groups"
+                  ],
+                  "values": [
+                    12,
+                    3
+                  ],
+                  "min": 1,
+                  "max": 20
+                }
               },
               {
                 "title": "Group size or number",
@@ -1745,7 +1791,22 @@ window.STEM_COURSES = {
               {
                 "title": "Numerator and denominator",
                 "body": "The numerator counts selected parts; the denominator counts equal parts in one whole.",
-                "example": "3/4 means three of four equal parts."
+                "example": "3/4 means three of four equal parts.",
+                "interactive": {
+                  "type": "fraction-bars",
+                  "title": "Build and compare fractions",
+                  "instructions": "Change each numerator and denominator.",
+                  "fractions": [
+                    [
+                      1,
+                      2
+                    ],
+                    [
+                      3,
+                      4
+                    ]
+                  ]
+                }
               },
               {
                 "title": "Proper and improper fractions",
@@ -2691,7 +2752,18 @@ window.STEM_COURSES = {
               {
                 "title": "Tips",
                 "body": "Tip = bill × tip rate.",
-                "example": "$60 with 15% tip adds $9."
+                "example": "$60 with 15% tip adds $9.",
+                "interactive": {
+                  "type": "probability-spinner",
+                  "title": "Run a fair chance experiment",
+                  "instructions": "Spin repeatedly and compare outcomes with the theoretical probability.",
+                  "labels": [
+                    "A",
+                    "B",
+                    "C",
+                    "D"
+                  ]
+                }
               },
               {
                 "title": "Interest basics",
@@ -2981,7 +3053,16 @@ window.STEM_COURSES = {
               {
                 "title": "Keep equations balanced",
                 "body": "Do the same operation to both sides.",
-                "example": "x + 5 = 12 → x = 7."
+                "example": "x + 5 = 12 → x = 7.",
+                "interactive": {
+                  "type": "balance-scale",
+                  "title": "Keep both sides balanced",
+                  "instructions": "An equation stays true only when both sides remain equal.",
+                  "left": 7,
+                  "right": 7,
+                  "leftLabel": "Left expression",
+                  "rightLabel": "Right expression"
+                }
               },
               {
                 "title": "Use inverse operations",
@@ -3543,7 +3624,16 @@ window.STEM_COURSES = {
               {
                 "title": "Evaluate a function",
                 "body": "Substitute the input value.",
-                "example": "f(3) = 2(3) + 1 = 7."
+                "example": "f(3) = 2(3) + 1 = 7.",
+                "interactive": {
+                  "type": "coordinate-grid",
+                  "title": "Move a point on the coordinate plane",
+                  "instructions": "Adjust x and y and read the ordered pair.",
+                  "min": -5,
+                  "max": 5,
+                  "x": 2,
+                  "y": 3
+                }
               },
               {
                 "title": "Tables",
@@ -3623,7 +3713,14 @@ window.STEM_COURSES = {
               {
                 "title": "Coordinates",
                 "body": "Points are written (x, y).",
-                "example": "(2, 5) means x = 2 and y = 5."
+                "example": "(2, 5) means x = 2 and y = 5.",
+                "interactive": {
+                  "type": "function-slider",
+                  "title": "Explore y = mx + b",
+                  "instructions": "Change the slope and intercept and watch the line move.",
+                  "slope": 1,
+                  "intercept": 0
+                }
               },
               {
                 "title": "Slope-intercept form",
@@ -3823,7 +3920,14 @@ window.STEM_COURSES = {
               {
                 "title": "Space inside",
                 "body": "Area measures two-dimensional space.",
-                "example": "Rectangle area = length × width."
+                "example": "Rectangle area = length × width.",
+                "interactive": {
+                  "type": "area-model",
+                  "title": "Explore rectangle area",
+                  "instructions": "Change width and height to see how area changes.",
+                  "width": 6,
+                  "height": 4
+                }
               },
               {
                 "title": "Triangle area",
@@ -3917,7 +4021,13 @@ window.STEM_COURSES = {
               {
                 "title": "Acute, right and obtuse",
                 "body": "Acute < 90°, right = 90°, obtuse is between 90° and 180°.",
-                "example": "120° is obtuse."
+                "example": "120° is obtuse.",
+                "interactive": {
+                  "type": "angle-explorer",
+                  "title": "Classify an angle",
+                  "instructions": "Move the slider through acute, right, obtuse, straight and reflex angles.",
+                  "angle": 60
+                }
               },
               {
                 "title": "Straight and reflex",
