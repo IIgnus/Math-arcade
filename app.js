@@ -26,6 +26,10 @@ import { createQuizSession, isAnswerCorrect, recordQuestionAttempt, calculateSes
 import { getTopicMastery as readTopicMastery, updateTopicMastery as recalculateTopicMastery, isTopicUnlocked, isLessonUnlocked as lessonUnlockedByProgress, calculateLessonStars, calculatorUnlocks as getCalculatorUnlocks } from './js/progression.js';
 import { createCalculator } from './js/calculator.js';
 import { createScratchpad } from './js/scratchpad.js';
+import { createAppState } from './js/app-state.js';
+import { createNavigation } from './js/navigation.js';
+import { createSaveService } from './js/save-service.js';
+import { createErrorHandler } from './js/error-handler.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -38,6 +42,43 @@ const firebaseConfig = {
 
 const { courses: COURSES, report: CONTENT_REPORT } = loadContent(window.STEM_COURSES);
 const $ = id => document.getElementById(id);
+
+function ensureSystemUI() {
+  if (!$('save-status')) {
+    const badge = document.createElement('div');
+    badge.id = 'save-status';
+    badge.className = 'save-status hidden';
+    badge.setAttribute('aria-live', 'polite');
+    document.body.appendChild(badge);
+  }
+
+  if (!$('app-loading')) {
+    const loading = document.createElement('div');
+    loading.id = 'app-loading';
+    loading.className = 'app-loading hidden';
+    loading.innerHTML = '<div class="app-loading-card"><div class="loading-spinner"></div><strong id="app-loading-copy">Loading STEM Quest…</strong></div>';
+    document.body.appendChild(loading);
+  }
+}
+
+ensureSystemUI();
+
+function setLoading(visible, message = 'Loading STEM Quest…') {
+  $('app-loading-copy').textContent = message;
+  $('app-loading').classList.toggle('hidden', !visible);
+}
+
+function updateSaveStatus({ state }) {
+  const badge = $('save-status');
+  badge.classList.remove('hidden', 'saving', 'saved', 'error');
+  badge.classList.add(state);
+  badge.textContent = state === 'saving' ? 'Saving…' : state === 'error' ? 'Save failed' : 'Saved';
+
+  if (state === 'saved') {
+    clearTimeout(updateSaveStatus.timer);
+    updateSaveStatus.timer = setTimeout(() => badge.classList.add('hidden'), 1600);
+  }
+}
 
 const DEFAULT_PLAYER = {
   schemaVersion: 2,
@@ -96,6 +137,9 @@ let session = {
   config: null
 };
 
+const appState = createAppState();
+let navigationStarted = false;
+
 try {
   const app = initializeApp(firebaseConfig);
 
@@ -111,6 +155,41 @@ try {
   $('firebase-status').textContent =
     'Firebase is unavailable. Local learning still works.';
 }
+
+
+const errorHandler = createErrorHandler({ toast, modal });
+
+function currentLocalKey() {
+  return localMode
+    ? 'stemQuestLocalPlayer'
+    : `stemQuestBackup_${firebaseUser?.uid || 'guest'}`;
+}
+
+const saveService = createSaveService({
+  writeLocal(snapshot) {
+    localStorage.setItem(currentLocalKey(), JSON.stringify({
+      ...snapshot,
+      localSavedAt: Date.now()
+    }));
+  },
+  async writeCloud(snapshot) {
+    if (!firebaseUser || !db || !navigator.onLine) return;
+
+    await setDoc(
+      doc(db, 'users', firebaseUser.uid),
+      {
+        ...snapshot,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+  },
+  onStatus: updateSaveStatus,
+  onError(error) {
+    updateSaveStatus({ state: 'error' });
+    errorHandler.report(error, 'Player save');
+  }
+});
 
 function mergePlayer(raw = {}) {
   const merged = structuredClone(DEFAULT_PLAYER);
@@ -151,34 +230,20 @@ async function savePlayer() {
 
   const snapshot = JSON.parse(JSON.stringify(player));
 
-  const localKey = localMode
-    ? 'stemQuestLocalPlayer'
-    : `stemQuestBackup_${firebaseUser?.uid || 'guest'}`;
-
-  localStorage.setItem(localKey, JSON.stringify(snapshot));
-
-  if (firebaseUser && db) {
-    try {
-      await setDoc(
-        doc(db, 'users', firebaseUser.uid),
-        {
-          ...snapshot,
-          updatedAt: serverTimestamp()
-        },
-        {
-          merge: true
-        }
-      );
-    } catch (error) {
-      console.error(error);
-      toast('Cloud save failed; a local backup was kept.');
-    }
+  try {
+    await saveService.save(snapshot, {
+      cloud: Boolean(firebaseUser && db)
+    });
+  } catch {
+    toast('Cloud save failed; a local backup was kept.');
   }
 
   syncUI();
 }
 
 async function loadCloudPlayer(user) {
+  setLoading(true, 'Loading your progress…');
+
   const reference = doc(db, 'users', user.uid);
   const cloudSnapshot = await getDoc(reference);
 
@@ -199,6 +264,7 @@ async function loadCloudPlayer(user) {
   }
 
   await savePlayer();
+  setLoading(false);
 }
 
 if (firebaseEnabled) {
@@ -270,57 +336,76 @@ $('local-login-btn').onclick = () => {
 
 function enterApp() {
   $('bottom-nav').classList.remove('hidden');
-
   applySettings();
-  showView('home-view');
+
+  const restored = appState.read();
+  selectedCourseId = restored.selectedCourseId || selectedCourseId;
+  selectedTopicId = restored.selectedTopicId || selectedTopicId;
+  selectedLessonId = restored.selectedLessonId || selectedLessonId;
+  lessonPageIndex = Number(restored.lessonPageIndex || 0);
+
+  if (!navigationStarted) {
+    navigation.start(restored.viewId || 'home-view');
+    navigationStarted = true;
+  } else {
+    showView(restored.viewId || 'home-view', { replace: true });
+  }
+
+  setLoading(false);
 }
 
 const views = [
   ...document.querySelectorAll('.view')
 ];
 
-function showView(id) {
+function renderView(id) {
   views.forEach(view => {
-    view.classList.toggle(
-      'active',
-      view.id === id
-    );
+    view.classList.toggle('active', view.id === id);
   });
 
-  document
-    .querySelectorAll('[data-view]')
-    .forEach(button => {
-      button.classList.toggle(
-        'active',
-        button.dataset.view === id
-      );
-    });
-  if (id === 'home-view') {
-    renderHome();
-  }
-  if (id === 'progress-view') {
-    renderProgress();
-  }
-  if (id === 'daily-view') {
-    renderDaily();
-  }
-  if (id === 'tournament-view') {
-    renderTournament();
-  }
-  if (id === 'profile-view') {
-    renderProfile();
-  }
+  document.querySelectorAll('[data-view]').forEach(button => {
+    button.classList.toggle('active', button.dataset.view === id);
+  });
+
+  if (id === 'home-view') renderHome();
+  if (id === 'progress-view') renderProgress();
+  if (id === 'daily-view') renderDaily();
+  if (id === 'tournament-view') renderTournament();
+  if (id === 'profile-view') renderProfile();
+
+  appState.write({
+    viewId: id,
+    selectedCourseId,
+    selectedTopicId,
+    selectedLessonId,
+    lessonPageIndex
+  });
+
   window.scrollTo(0, 0);
 }
 
+const navigation = createNavigation({
+  initialView: 'home-view',
+  canLeaveCurrentView(currentView, targetView) {
+    if (currentView !== 'game-view' || targetView === 'game-view' || targetView === 'result-view') {
+      return true;
+    }
 
-document
-  .querySelectorAll('[data-view]')
-  .forEach(element => {
-    element.onclick = () => {
-      showView(element.dataset.view);
-    };
-  });
+    return confirm('Leave this quiz? Your completed answers are saved, but the current session will end.');
+  },
+  onNavigate: renderView,
+  onBlocked() {
+    toast('Finish or exit the current quiz first.');
+  }
+});
+
+function showView(id, options = {}) {
+  return navigation.navigate(id, options);
+}
+
+document.querySelectorAll('[data-view]').forEach(element => {
+  element.onclick = () => showView(element.dataset.view);
+});
 
 function syncUI() {
   updateLevel();
@@ -888,6 +973,7 @@ function startSession(config) {
 
   scratchpad.reset();
 
+  appState.write({ viewId: 'game-view', activeQuiz: true });
   showView('game-view');
   renderQuestion();
 }
@@ -1482,6 +1568,7 @@ function finishSession() {
   addDailyActivity();
   savePlayer();
 
+  appState.write({ viewId: 'result-view', activeQuiz: false });
   showView('result-view');
 }
 
@@ -2223,6 +2310,7 @@ async function performLogout() {
     localMode = false;
     player =
       structuredClone(DEFAULT_PLAYER);
+    appState.clear();
     clearInterval(session.timer);
     $('bottom-nav').classList.add('hidden');
     closeAppModal();
@@ -2460,6 +2548,26 @@ function escapeHtml(value) {
     }
   );
 }
+
+
+window.addEventListener('beforeunload', event => {
+  const activeView = document.querySelector('.view.active')?.id;
+
+  saveService.saveLocalImmediately(
+    JSON.parse(JSON.stringify(player))
+  );
+
+  if (activeView === 'game-view' && !session.answered) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
+window.addEventListener('pagehide', () => {
+  saveService.saveLocalImmediately(
+    JSON.parse(JSON.stringify(player))
+  );
+});
 
 syncUI();
 
