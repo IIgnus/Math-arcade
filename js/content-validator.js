@@ -1,5 +1,6 @@
 const VALID_QUESTION_TYPES = new Set(['choice', 'number', 'text']);
 const VALID_CALCULATOR_MODES = new Set(['none', 'basic', 'scientific', 'graphing']);
+const VALID_INTERACTIVE_TYPES = new Set(['quantity-bars', 'number-line', 'place-value', 'fraction-bars', 'balance-scale', 'area-model', 'coordinate-grid', 'angle-explorer', 'function-slider', 'live-graph', 'probability-spinner']);
 
 function issue(level, code, message, location = '') {
   return { level, code, message, location };
@@ -94,6 +95,13 @@ function validateNestedCourses(courses) {
             }
             if (!isNonEmptyString(page?.body)) {
               issues.push(issue('error', 'PAGE_BODY_MISSING', `Page ${pageIndex + 1} in lesson "${lessonId}" has no explanation text.`, pageLocation));
+            }
+            if (page?.interactive != null) {
+              if (typeof page.interactive !== 'object' || Array.isArray(page.interactive)) {
+                issues.push(issue('error', 'INTERACTIVE_CONFIG_INVALID', `Page ${pageIndex + 1} in lesson "${lessonId}" has an invalid interactive configuration.`, pageLocation));
+              } else if (!VALID_INTERACTIVE_TYPES.has(page.interactive.type)) {
+                issues.push(issue('error', 'INTERACTIVE_TYPE_INVALID', `Page ${pageIndex + 1} in lesson "${lessonId}" uses unsupported interactive type "${page.interactive.type}".`, pageLocation));
+              }
             }
           });
         }
