@@ -329,3 +329,127 @@ body[data-font-size="extra-large"] { font-size: 20px; }
 .spinner-pointer { position:absolute; left:50%; top:0; transform:translateX(-50%); z-index:2; font-size:2rem; color:var(--danger); }
 .reduced-motion .interactive-bar-fill,.reduced-motion .interactive-number-marker,.reduced-motion .interactive-number-jump,.reduced-motion .balance-beam,.reduced-motion .spinner-wheel { transition:none !important; }
 @media (max-width:640px) { .interactive-lesson { padding:15px; } .interactive-lesson-head { flex-direction:column; } .place-value-grid { grid-template-columns:repeat(2,1fr); } .fraction-bar-row { grid-template-columns:1fr; } .coordinate-grid,.angle-explorer,.function-graph { max-height:270px; } }
+
+/* v10: mobile polish and developer testing tools */
+.developer-tools-root.dev-disabled { display: none; }
+.dev-tools-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 1200;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--text);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.16);
+}
+.dev-tools-panel {
+  position: fixed;
+  right: 18px;
+  bottom: calc(154px + env(safe-area-inset-bottom));
+  z-index: 1250;
+  width: min(390px, calc(100vw - 36px));
+  max-height: min(720px, calc(100vh - 190px));
+  overflow: auto;
+  padding: 20px;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 18px 55px rgba(0,0,0,.24);
+}
+.dev-tools-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.dev-tools-head h2 { margin: 2px 0 0; }
+.dev-action-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+.dev-selection-info { margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface); font-size:.9rem; overflow-wrap:anywhere; }
+.dev-selection-info p { margin:.35rem 0; }
+body.dev-phone-preview { max-width: 430px; margin: 0 auto; box-shadow: 0 0 0 1px var(--line), 0 0 60px rgba(0,0,0,.25); }
+body.dev-phone-preview .topbar { max-width: 430px; left:50%; transform:translateX(-50%); }
+
+@media (max-width: 900px) {
+  main { padding-left: 14px; padding-right: 14px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .side-card { width: 100%; }
+  .pathway-panel { order: -1; }
+  .section-heading { align-items: stretch; }
+  .lesson-card { grid-template-columns: auto minmax(0,1fr); }
+  .lesson-card > .btn { grid-column: 1 / -1; width:100%; }
+  .profile-header-card { align-items:center; }
+  .quiz-shell { width:100%; }
+  .quiz-card { padding: clamp(18px, 5vw, 30px); }
+  .quiz-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .quiz-actions .btn { width:100%; }
+  .calculator-panel, .tool-panel { width:100%; }
+  .calc-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .interactive-block { max-width:100%; overflow:hidden; }
+  .interactive-stage, .interactive-canvas-wrap { max-width:100%; overflow:auto hidden; }
+}
+
+@media (max-width: 620px) {
+  body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .topbar { padding: 10px 12px; gap:8px; }
+  .brand { font-size:0; padding:10px; }
+  .brand::after { content:'🧠'; font-size:24px; }
+  .top-stats { gap:6px; }
+  .stat-pill { padding:7px 9px; font-size:.78rem; }
+  #heart-tag { display:none; }
+  .top-profile-btn { min-width:0; padding:6px 8px; }
+  .top-profile-icon { font-size:22px; }
+  #top-profile-level { font-size:.75rem; }
+  main { padding-top: 14px; }
+  .panel { border-radius:18px; }
+  .content-panel { padding:16px; }
+  .pathway-panel { padding:16px; }
+  .section-heading { display:grid; gap:12px; }
+  .section-heading > .btn { width:100%; }
+  .course-tabs { display:flex; overflow-x:auto; padding-bottom:5px; scrollbar-width:thin; }
+  .course-tab { flex:0 0 auto; }
+  .path-node { grid-template-columns:auto minmax(0,1fr); padding:15px; }
+  .node-orb { width:56px; height:56px; }
+  .lesson-card { padding:14px; gap:10px; }
+  .lesson-icon { width:48px; height:48px; }
+  .lesson-content h1, .question-text { overflow-wrap:anywhere; }
+  .lesson-controls { position:sticky; bottom:calc(72px + env(safe-area-inset-bottom)); z-index:20; padding:10px; margin:18px -6px -6px; border:1px solid var(--line); border-radius:16px; background:color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter:blur(10px); }
+  .lesson-controls .btn { flex:1; }
+  .quiz-top { gap:6px; }
+  .quiz-progress { min-width:60px; }
+  #quiz-hearts { font-size:.8rem; }
+  .quiz-meta { gap:6px; }
+  .quiz-meta .badge { font-size:.72rem; }
+  .quiz-actions { grid-template-columns:1fr; }
+  .answer-input-row { grid-template-columns:1fr; }
+  .option { padding:15px 14px; min-height:58px; }
+  .tool-row, .graph-input-row { display:grid; grid-template-columns:1fr; }
+  #scratch-canvas, #graph-canvas { width:100%; height:auto; max-height:55vh; }
+  .symbol-row { display:grid; grid-template-columns:repeat(4,1fr); }
+  .calc-grid button { min-height:52px; font-size:1rem; }
+  .profile-header-card { text-align:center; }
+  .profile-level-row { justify-content:center; }
+  .profile-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .profile-section { padding:16px; }
+  .profile-sticky-back { top:74px; }
+  .bottom-nav { padding-bottom:env(safe-area-inset-bottom); }
+  .bottom-nav button { min-width:0; padding:9px 4px; font-size:1.05rem; }
+  .bottom-nav button span { font-size:.68rem; }
+  .dev-tools-toggle { right:12px; bottom:calc(82px + env(safe-area-inset-bottom)); }
+  .dev-tools-panel { right:10px; bottom:calc(142px + env(safe-area-inset-bottom)); width:calc(100vw - 20px); max-height:calc(100vh - 165px); }
+  .dev-action-grid { grid-template-columns:1fr; }
+}
+
+@media (max-width: 380px) {
+  #streak-tag { display:none; }
+  .profile-stat-grid { grid-template-columns:1fr; }
+  .lesson-controls { flex-direction:column; }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .topbar { position:static; }
+  body { padding-bottom:0; }
+  .bottom-nav { position:static; }
+  .profile-sticky-back, .lesson-controls { position:static; }
+  .dev-tools-panel { max-height:80vh; }
+}
