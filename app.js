@@ -31,6 +31,7 @@ import { createNavigation } from './js/navigation.js';
 import { createSaveService } from './js/save-service.js';
 import { createErrorHandler } from './js/error-handler.js';
 import { renderInteractiveLesson } from './js/interactive-lessons.js';
+import { createDeveloperTools } from './js/dev-tools.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -2604,6 +2605,30 @@ function escapeHtml(value) {
   );
 }
 
+
+
+const developerTools = createDeveloperTools({
+  courses: COURSES,
+  contentReport: CONTENT_REPORT,
+  getPlayer: () => player,
+  savePlayer,
+  jumpToTopic(courseId, topicId) {
+    selectedCourseId = courseId;
+    selectedTopicId = topicId;
+    renderTopic();
+    showView('topic-view');
+  },
+  jumpToLesson(courseId, topicId, lessonId) {
+    selectedCourseId = courseId;
+    selectedTopicId = topicId;
+    selectedLessonId = lessonId;
+    lessonPageIndex = 0;
+    renderLessonPage();
+    showView('lesson-view');
+  },
+  showView,
+  toast
+});
 
 window.addEventListener('beforeunload', event => {
   const activeView = document.querySelector('.view.active')?.id;
