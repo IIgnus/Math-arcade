@@ -30,7 +30,13 @@ export function isAnswerCorrect(question, value, timedOut = false) {
   }
 
   const tolerance = Number(question.tolerance || 0);
-  return Number.isFinite(value) && Math.abs(value - question.answer) <= tolerance;
+  const accepted = Array.isArray(question.acceptedAnswers)
+    ? question.acceptedAnswers
+    : [question.answer];
+  return Number.isFinite(value) && accepted.some(answer => {
+    const numeric = Number(answer);
+    return Number.isFinite(numeric) && Math.abs(value - numeric) <= tolerance;
+  });
 }
 
 export function recordQuestionAttempt(player, questionId, correct) {
@@ -54,3 +60,4 @@ export function calculateSessionScore(session) {
   const total = session.questions.length;
   return total ? Math.round((session.correct / total) * 100) : 0;
 }
+
