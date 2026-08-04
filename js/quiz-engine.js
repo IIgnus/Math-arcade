@@ -1,4 +1,4 @@
-xport function createQuizSession(config = {}) {
+export function createQuizSession(config = {}) {
   return {
     mode: config.mode || 'practice',
     questions: [...(config.questions || [])],
