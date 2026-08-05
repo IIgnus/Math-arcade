@@ -352,17 +352,33 @@ function enterApp() {
   $('bottom-nav').classList.remove('hidden');
   applySettings();
 
-  const restored = appState.read();
-  selectedCourseId = restored.selectedCourseId || selectedCourseId;
-  selectedTopicId = restored.selectedTopicId || selectedTopicId;
-  selectedLessonId = restored.selectedLessonId || selectedLessonId;
-  lessonPageIndex = Number(restored.lessonPageIndex || 0);
+  // Every fresh login starts on the main menu instead of reopening
+  // a lesson, quiz or result screen from the previous session.
+  clearInterval(session.timer);
+  session = createQuizSession({
+    mode: 'practice',
+    questions: []
+  });
+
+  selectedTopicId = null;
+  selectedLessonId = null;
+  lessonPageIndex = 0;
+
+  appState.clear();
+  appState.write({
+    viewId: 'home-view',
+    selectedCourseId,
+    selectedTopicId: null,
+    selectedLessonId: null,
+    lessonPageIndex: 0,
+    activeQuiz: false
+  });
 
   if (!navigationStarted) {
-    navigation.start(restored.viewId || 'home-view');
+    navigation.start('home-view');
     navigationStarted = true;
   } else {
-    showView(restored.viewId || 'home-view', { replace: true });
+    showView('home-view', { replace: true });
   }
 
   setLoading(false);
@@ -2627,7 +2643,11 @@ const developerTools = createDeveloperTools({
     showView('lesson-view');
   },
   showView,
-  toast
+  toast,
+  refreshHome() {
+    renderHome();
+    syncUI();
+  }
 });
 
 window.addEventListener('beforeunload', event => {
