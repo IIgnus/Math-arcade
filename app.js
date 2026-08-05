@@ -32,6 +32,10 @@ import { createSaveService } from './js/save-service.js';
 import { createErrorHandler } from './js/error-handler.js';
 import { renderInteractiveLesson } from './js/interactive-lessons.js';
 import { createDeveloperTools } from './js/dev-tools.js';
+import { createBackendService } from './js/backend-service.js';
+
+const APP_VERSION = '11.0.0-rc1';
+const BUILD_LABEL = 'Release Candidate';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -64,6 +68,14 @@ function ensureSystemUI() {
 }
 
 ensureSystemUI();
+
+if (!$('build-chip')) {
+  const buildChip = document.createElement('div');
+  buildChip.id = 'build-chip';
+  buildChip.className = 'build-chip';
+  buildChip.textContent = `v${APP_VERSION} · ${BUILD_LABEL}`;
+  document.body.appendChild(buildChip);
+}
 
 function setLoading(visible, message = 'Loading STEM Quest…') {
   $('app-loading-copy').textContent = message;
@@ -121,8 +133,11 @@ const DEFAULT_PLAYER = {
   }
 };
 
+let firebaseApp = null;
 let auth = null;
 let db = null;
+let backendService = null;
+let backendFlags = { showOnboarding: true, tournamentsEnabled: true, developerToolsEnabled: false, maintenanceMessage: '' };
 let firebaseEnabled = false;
 let firebaseUser = null;
 let localMode = false;
@@ -151,10 +166,25 @@ const appState = createAppState();
 let navigationStarted = false;
 
 try {
-  const app = initializeApp(firebaseConfig);
+  firebaseApp = initializeApp(firebaseConfig);
 
-  auth = getAuth(app);
-  db = getFirestore(app);
+  auth = getAuth(firebaseApp);
+  db = getFirestore(firebaseApp);
+  backendService = createBackendService({
+    app: firebaseApp,
+    config: firebaseConfig,
+    onStatus({ services, flags }) {
+      backendFlags = flags;
+      const copy = $('backend-status-copy');
+      if (copy) copy.textContent = services.length ? `${services.join(' + ')} ready` : 'Core Firebase ready';
+      const remoteMessage = $('remote-message');
+      if (remoteMessage && flags.maintenanceMessage) {
+        remoteMessage.textContent = flags.maintenanceMessage;
+        remoteMessage.classList.remove('hidden');
+      }
+    }
+  });
+  backendService.initialize().catch(console.warn);
   firebaseEnabled = true;
 
   $('firebase-status').textContent =
@@ -279,6 +309,27 @@ async function loadCloudPlayer(user) {
 
   await savePlayer();
   setLoading(false);
+  backendService?.track('login_complete', { mode: firebaseUser ? 'google' : 'local' });
+  maybeShowOnboarding();
+}
+
+function maybeShowOnboarding() {
+  if (!backendFlags.showOnboarding) return;
+  const key = `stemQuestOnboarding_${APP_VERSION.split('.')[0]}`;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, 'shown');
+  setTimeout(() => {
+    modal(`
+      <p class="eyebrow">WELCOME TO STEM QUEST</p>
+      <h2>Your learning path is ready</h2>
+      <div class="onboarding-steps">
+        <div class="onboarding-step"><span>📘</span><div><strong>Learn visually</strong><p class="muted">Move sliders, explore models and read short worked examples.</p></div></div>
+        <div class="onboarding-step"><span>⭐</span><div><strong>Build mastery</strong><p class="muted">Complete lessons, earn stars and unlock new topics.</p></div></div>
+        <div class="onboarding-step"><span>🧰</span><div><strong>Use learning tools</strong><p class="muted">Open the scratchpad or an approved calculator during questions.</p></div></div>
+      </div>
+      <p class="tiny muted">You can change text size, contrast, motion and timing from Profile.</p>
+    `);
+  }, 350);
 }
 
 if (firebaseEnabled) {
@@ -382,6 +433,27 @@ function enterApp() {
   }
 
   setLoading(false);
+  backendService?.track('login_complete', { mode: firebaseUser ? 'google' : 'local' });
+  maybeShowOnboarding();
+}
+
+function maybeShowOnboarding() {
+  if (!backendFlags.showOnboarding) return;
+  const key = `stemQuestOnboarding_${APP_VERSION.split('.')[0]}`;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, 'shown');
+  setTimeout(() => {
+    modal(`
+      <p class="eyebrow">WELCOME TO STEM QUEST</p>
+      <h2>Your learning path is ready</h2>
+      <div class="onboarding-steps">
+        <div class="onboarding-step"><span>📘</span><div><strong>Learn visually</strong><p class="muted">Move sliders, explore models and read short worked examples.</p></div></div>
+        <div class="onboarding-step"><span>⭐</span><div><strong>Build mastery</strong><p class="muted">Complete lessons, earn stars and unlock new topics.</p></div></div>
+        <div class="onboarding-step"><span>🧰</span><div><strong>Use learning tools</strong><p class="muted">Open the scratchpad or an approved calculator during questions.</p></div></div>
+      </div>
+      <p class="tiny muted">You can change text size, contrast, motion and timing from Profile.</p>
+    `);
+  }, 350);
 }
 
 const views = [
@@ -411,6 +483,7 @@ function renderView(id) {
     lessonPageIndex
   });
 
+  backendService?.track('screen_view', { screen_name: id });
   window.scrollTo(0, 0);
 }
 
@@ -1969,6 +2042,12 @@ function tournamentQuestions() {
 }
 
 function renderTournament() {
+  if (!backendFlags.tournamentsEnabled) {
+    $('start-tournament-btn').disabled = true;
+    $('tournament-info').textContent = 'Weekly leagues are temporarily unavailable.';
+    $('leaderboard-wrap').textContent = 'Please check again later.';
+    return;
+  }
   $('tournament-info').innerHTML = `
     League week:
     <strong>
@@ -2178,6 +2257,8 @@ function calculateOverallAccuracy() {
 
 function renderProfile() {
   updateLevel();
+  if ($('app-version-copy')) $('app-version-copy').textContent = `STEM Quest v${APP_VERSION}`;
+  if ($('backend-status-copy') && !firebaseEnabled) $('backend-status-copy').textContent = 'Local mode only';
 
   const accountType =
     firebaseUser
@@ -2408,6 +2489,59 @@ async function performLogout() {
 }
 
 
+
+$('report-question-btn').onclick = () => {
+  const question = session.questions?.[session.index];
+  const topic = question ? findTopic(question.topicId) : null;
+  modal(`
+    <p class="eyebrow">REPORT A QUESTION</p>
+    <h2>What went wrong?</h2>
+    <div class="report-context"><strong>${escapeHtml(question?.id || 'Unknown question')}</strong><br>${escapeHtml(topic?.title || 'Mixed review')}</div>
+    <label class="setting-field">Category
+      <select id="quick-report-category" class="field">
+        <option value="incorrect-question">Question or answer is incorrect</option>
+        <option value="confusing-explanation">Explanation is confusing</option>
+        <option value="technical-issue">Something is broken</option>
+        <option value="accessibility">Accessibility problem</option>
+      </select>
+    </label>
+    <textarea id="quick-report-message" class="field feedback-textarea" maxlength="1000" placeholder="Describe the problem…"></textarea>
+    <button id="send-quick-report-btn" class="btn primary wide">Send report</button>
+  `);
+  $('send-quick-report-btn').onclick = async () => {
+    const message = $('quick-report-message').value.trim();
+    if (message.length < 10) { toast('Please add a little more detail.'); return; }
+    const report = {
+      category: $('quick-report-category').value,
+      message,
+      userId: firebaseUser?.uid || null,
+      displayName: player.name || 'Learner',
+      questionId: question?.id || null,
+      lessonId: question?.lessonId || null,
+      topicId: question?.topicId || null,
+      courseId: question?.courseId || null,
+      appVersion: APP_VERSION,
+      page: 'game-view',
+      createdAtLocal: Date.now()
+    };
+    try {
+      if (firebaseUser && db) {
+        await addDoc(collection(db, 'feedback'), { ...report, createdAt: serverTimestamp() });
+      } else {
+        const localReports = JSON.parse(localStorage.getItem('stemQuestFeedback') || '[]');
+        localReports.push(report);
+        localStorage.setItem('stemQuestFeedback', JSON.stringify(localReports.slice(-50)));
+      }
+      backendService?.track('question_reported', { category: report.category, question_id: report.questionId || 'unknown' });
+      closeAppModal();
+      toast(firebaseUser ? 'Report sent. Thank you!' : 'Report saved on this device.');
+    } catch (error) {
+      console.error(error);
+      toast('The report could not be sent.');
+    }
+  };
+};
+
 $('submit-feedback-btn').onclick = async () => {
   const category = $('feedback-category').value;
   const message = $('feedback-message').value.trim();
@@ -2424,6 +2558,7 @@ $('submit-feedback-btn').onclick = async () => {
     displayName: player.name || 'Learner',
     questionId: session.questions?.[session.index]?.id || null,
     page: document.querySelector('.view.active')?.id || 'unknown',
+    appVersion: APP_VERSION,
     createdAtLocal: Date.now()
   };
 
