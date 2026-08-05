@@ -10,7 +10,8 @@ export function createDeveloperTools({
   jumpToTopic,
   jumpToLesson,
   showView,
-  toast
+  toast,
+  refreshHome
 }) {
   const root = document.createElement('div');
   root.id = 'developer-tools-root';
@@ -47,8 +48,10 @@ export function createDeveloperTools({
   const topicSelect = $('dev-topic');
   const lessonSelect = $('dev-lesson');
 
-  const enabledByUrl = new URLSearchParams(location.search).get('dev') === '1';
-  let enabled = enabledByUrl || localStorage.getItem('stemQuestDevMode') === 'true';
+  const params = new URLSearchParams(location.search);
+  const embeddedPreview = params.get('phonePreview') === '1';
+  const enabledByUrl = params.get('dev') === '1';
+  let enabled = !embeddedPreview && (enabledByUrl || localStorage.getItem('stemQuestDevMode') === 'true');
 
   function setEnabled(value) {
     enabled = Boolean(value);
@@ -150,6 +153,8 @@ export function createDeveloperTools({
       }
     }
     await savePlayer();
+    refreshHome?.();
+    updateSelectionInfo();
     toast('Developer unlock applied.');
   });
 
@@ -166,13 +171,53 @@ export function createDeveloperTools({
     player.courseRewards = {};
     player.placementCompleted = false;
     await savePlayer();
+    refreshHome?.();
+    updateSelectionInfo();
     toast('Learning progress reset.');
     showView('home-view');
   });
 
+  function closePhonePreview() {
+    document.getElementById('dev-phone-preview-overlay')?.remove();
+  }
+
   $('dev-mobile-preview').addEventListener('click', () => {
-    document.body.classList.toggle('dev-phone-preview');
-    $('dev-mobile-preview').textContent = document.body.classList.contains('dev-phone-preview') ? 'Exit phone preview' : 'Phone preview';
+    const existing = document.getElementById('dev-phone-preview-overlay');
+    if (existing) {
+      closePhonePreview();
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'dev-phone-preview-overlay';
+    overlay.className = 'dev-phone-preview-overlay';
+
+    const previewUrl = new URL(location.href);
+    previewUrl.searchParams.set('phonePreview', '1');
+    previewUrl.searchParams.delete('dev');
+
+    overlay.innerHTML = `
+      <div class="dev-phone-preview-shell">
+        <div class="dev-phone-preview-head">
+          <div>
+            <strong>Phone preview</strong>
+            <small>390 × 844 CSS pixels</small>
+          </div>
+          <button id="dev-close-phone-preview" class="icon-btn" type="button" aria-label="Close phone preview">✕</button>
+        </div>
+        <iframe
+          class="dev-phone-preview-frame"
+          title="STEM Quest phone preview"
+          src="${esc(previewUrl.toString())}"
+        ></iframe>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.getElementById('dev-close-phone-preview')?.addEventListener('click', closePhonePreview);
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) closePhonePreview();
+    });
   });
 
   $('dev-home').addEventListener('click', () => {
@@ -195,6 +240,7 @@ export function createDeveloperTools({
 
   fillCourses();
   setEnabled(enabled);
+  if (embeddedPreview) root.classList.add('dev-disabled');
 
   return { setEnabled, refresh: updateSelectionInfo };
 }
