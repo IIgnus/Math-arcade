@@ -9,7 +9,10 @@
 </head>
 <body>
   <header class="topbar">
-    <button class="brand" data-view="home-view" aria-label="Go home">🧠 STEM Quest</button>
+    <button class="brand" data-view="home-view" aria-label="Go home">
+      <span class="brand-icon" aria-hidden="true">🧠</span>
+      <span class="brand-name">STEM Quest</span>
+    </button>
     <div class="top-stats">
       <span id="streak-tag" class="stat-pill">🔥 0</span>
       <span id="heart-tag" class="stat-pill">❤️ 5</span>
@@ -114,6 +117,7 @@
           <div class="quiz-actions">
             <button id="hint-btn" class="btn secondary">Hint</button>
             <button id="read-btn" class="btn secondary">Read aloud</button>
+            <button id="report-question-btn" class="btn secondary">Report problem</button>
             <button id="scratch-btn" class="btn secondary">Scratchpad</button>
             <button id="calculator-btn" class="btn secondary hidden">Calculator</button>
             <button id="next-btn" class="btn primary hidden">Continue</button>
@@ -348,6 +352,16 @@
           <textarea id="feedback-message" class="field feedback-textarea" maxlength="1000" placeholder="Tell us what happened or what would make learning better."></textarea>
           <button id="submit-feedback-btn" class="btn secondary">Send feedback</button>
           <p class="tiny muted">Do not include private information such as your full name, school, address or date of birth.</p>
+        </div>
+
+        <div class="profile-section">
+          <p class="eyebrow">APP & CLOUD STATUS</p>
+          <h2>Release information</h2>
+          <div class="release-status-grid">
+            <div class="status-box compact-status"><strong id="app-version-copy">STEM Quest v11</strong><small>Current build</small></div>
+            <div class="status-box compact-status"><strong id="backend-status-copy">Checking Firebase…</strong><small>Backend services</small></div>
+          </div>
+          <p id="remote-message" class="tiny muted hidden"></p>
         </div>
 
         <div class="profile-section">
