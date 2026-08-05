@@ -285,53 +285,6 @@ async function savePlayer() {
   syncUI();
 }
 
-async function loadCloudPlayer(user) {
-  setLoading(true, 'Loading your progress…');
-
-  const reference = doc(db, 'users', user.uid);
-  const cloudSnapshot = await getDoc(reference);
-
-  const localBackup = JSON.parse(
-    localStorage.getItem(`stemQuestBackup_${user.uid}`) || 'null'
-  );
-
-  player = mergePlayer(
-    cloudSnapshot.exists()
-      ? cloudSnapshot.data()
-      : localBackup || {
-          name: user.displayName || 'Learner'
-        }
-  );
-
-  if (!player.name || player.name === 'Guest') {
-    player.name = user.displayName || 'Learner';
-  }
-
-  await savePlayer();
-  setLoading(false);
-  backendService?.track('login_complete', { mode: firebaseUser ? 'google' : 'local' });
-  maybeShowOnboarding();
-}
-
-function maybeShowOnboarding() {
-  if (!backendFlags.showOnboarding) return;
-  const key = `stemQuestOnboarding_${APP_VERSION.split('.')[0]}`;
-  if (localStorage.getItem(key)) return;
-  localStorage.setItem(key, 'shown');
-  setTimeout(() => {
-    modal(`
-      <p class="eyebrow">WELCOME TO STEM QUEST</p>
-      <h2>Your learning path is ready</h2>
-      <div class="onboarding-steps">
-        <div class="onboarding-step"><span>📘</span><div><strong>Learn visually</strong><p class="muted">Move sliders, explore models and read short worked examples.</p></div></div>
-        <div class="onboarding-step"><span>⭐</span><div><strong>Build mastery</strong><p class="muted">Complete lessons, earn stars and unlock new topics.</p></div></div>
-        <div class="onboarding-step"><span>🧰</span><div><strong>Use learning tools</strong><p class="muted">Open the scratchpad or an approved calculator during questions.</p></div></div>
-      </div>
-      <p class="tiny muted">You can change text size, contrast, motion and timing from Profile.</p>
-    `);
-  }, 350);
-}
-
 if (firebaseEnabled) {
   onAuthStateChanged(auth, async user => {
     if (!user) {
