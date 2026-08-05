@@ -285,6 +285,37 @@ async function savePlayer() {
   syncUI();
 }
 
+async function loadCloudPlayer(user) {
+  if (!user || !db) {
+    throw new Error('Firebase user or Firestore is unavailable.');
+  }
+
+  const reference = doc(db, 'users', user.uid);
+  const snapshot = await getDoc(reference);
+
+  const localBackup = JSON.parse(
+    localStorage.getItem(`stemQuestBackup_${user.uid}`) || 'null'
+  );
+
+  if (snapshot.exists()) {
+    player = mergePlayer(snapshot.data());
+  } else if (localBackup) {
+    player = mergePlayer(localBackup);
+  } else {
+    player = mergePlayer({
+      name: user.displayName || 'STEM learner',
+      avatar: '🧑‍🚀'
+    });
+  }
+
+  player.name =
+    player.name ||
+    user.displayName ||
+    'STEM learner';
+
+  await savePlayer();
+}
+
 if (firebaseEnabled) {
   onAuthStateChanged(auth, async user => {
     if (!user) {
