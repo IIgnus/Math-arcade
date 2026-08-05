@@ -367,8 +367,45 @@ body[data-font-size="extra-large"] { font-size: 20px; }
 .dev-action-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
 .dev-selection-info { margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface); font-size:.9rem; overflow-wrap:anywhere; }
 .dev-selection-info p { margin:.35rem 0; }
-body.dev-phone-preview { max-width: 430px; margin: 0 auto; box-shadow: 0 0 0 1px var(--line), 0 0 60px rgba(0,0,0,.25); }
-body.dev-phone-preview .topbar { max-width: 430px; left:50%; transform:translateX(-50%); }
+.dev-phone-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 8, 23, .78);
+  backdrop-filter: blur(8px);
+}
+.dev-phone-preview-shell {
+  width: min(430px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 26px;
+  background: var(--card);
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+}
+.dev-phone-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.dev-phone-preview-head div { display:grid; gap:2px; }
+.dev-phone-preview-head small { color:var(--muted); }
+.dev-phone-preview-frame {
+  display: block;
+  width: 390px;
+  max-width: 100%;
+  height: min(844px, calc(100vh - 100px));
+  margin: 0 auto;
+  border: 0;
+  background: var(--surface);
+}
+
 
 @media (max-width: 900px) {
   main { padding-left: 14px; padding-right: 14px; }
@@ -452,4 +489,287 @@ body.dev-phone-preview .topbar { max-width: 430px; left:50%; transform:translate
   .bottom-nav { position:static; }
   .profile-sticky-back, .lesson-controls { position:static; }
   .dev-tools-panel { max-height:80vh; }
+}
+
+/* v10.2 real iPhone/mobile layout fixes */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+main,
+.view,
+.dashboard-grid,
+.dashboard-grid > *,
+.pathway-panel,
+.section-heading,
+.section-heading > *,
+.path-map,
+.path-node,
+.path-node > *,
+.lesson-card,
+.lesson-card > *,
+.content-panel,
+.quiz-shell,
+.quiz-card {
+  min-width: 0;
+}
+
+img, svg, canvas, video {
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .topbar {
+    width: 100%;
+    max-width: 100%;
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .brand {
+    flex: 0 0 auto;
+    max-width: 44px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .top-stats {
+    min-width: 0;
+    margin-left: auto;
+    overflow: visible;
+  }
+
+  .stat-pill {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  main {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .dashboard-grid {
+    width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .dashboard-grid > * {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .pathway-panel {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px 14px;
+    overflow: hidden;
+  }
+
+  .section-heading {
+    width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .section-heading h1 {
+    font-size: clamp(1.75rem, 9vw, 2.55rem);
+    line-height: 1.08;
+    margin: 6px 0 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .section-heading p,
+  .path-node h3,
+  .path-node p,
+  .path-node small {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  #placement-btn,
+  .section-heading > .btn {
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .course-tabs {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding: 10px 2px 12px;
+  }
+
+  .course-tab {
+    flex: 0 0 auto;
+    max-width: calc(100vw - 52px);
+    scroll-snap-align: start;
+  }
+
+  .path-map {
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+    padding: 16px 0 24px;
+    gap: 18px;
+    overflow: visible;
+  }
+
+  .path-map::before {
+    left: 27px;
+    transform: none;
+    width: 6px;
+  }
+
+  .path-node,
+  .path-node:nth-child(even),
+  .path-node:nth-child(odd) {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    transform: none !important;
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .path-node > div:last-child {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .node-orb {
+    width: 56px;
+    height: 56px;
+    font-size: 1.6rem;
+  }
+
+  .node-meta {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .mini-progress {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .side-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .bottom-nav {
+    width: 100%;
+    max-width: 100%;
+    padding-left: max(4px, env(safe-area-inset-left));
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-bottom: max(env(safe-area-inset-bottom), 6px);
+  }
+
+  .bottom-nav button {
+    overflow: hidden;
+  }
+
+  .bottom-nav span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar .brand {
+    font-size: 0 !important;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .topbar .brand::after {
+    content: '🧠';
+    font-size: 23px;
+  }
+
+  #heart-tag {
+    display: none !important;
+  }
+
+  .stat-pill {
+    padding: 7px 8px;
+    font-size: .78rem;
+  }
+
+  .top-profile-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  #top-profile-level {
+    display: none !important;
+  }
+
+  .pathway-panel {
+    padding: 14px 12px;
+  }
+
+  .path-node {
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .node-orb {
+    width: 48px;
+    height: 48px;
+    border-width: 3px;
+    font-size: 1.4rem;
+  }
+
+  .path-node h3 {
+    margin: 4px 0 6px;
+    font-size: 1.05rem;
+  }
+
+  .path-node p {
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.35;
+  }
+
+  .badge {
+    padding: 5px 8px;
+    font-size: .72rem;
+  }
 }
