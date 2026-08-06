@@ -35,8 +35,8 @@ import { createDeveloperTools } from './js/dev-tools.js';
 import { createBackendService } from './js/backend-service.js';
 import { createSocialService } from './js/social-service.js';
 
-const APP_VERSION = '11.2.0-rc1';
-const BUILD_LABEL = 'Realtime Challenges RC';
+const APP_VERSION = '11.2.1-rc1';
+const BUILD_LABEL = 'Realtime Social Fix RC';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -2402,7 +2402,8 @@ $('save-profile-btn').onclick = async () => {
 
 
 let socialDashboardLoading = false;
-let socialDashboardQueued = false;
+let pendingSocialDashboard = null;
+let latestSocialDashboard = null;
 let socialDashboardUnsubscribe = null;
 let latestSocialChallenges = new Map();
 
@@ -2495,28 +2496,49 @@ async function renderSocialPanel(dashboardOverride = null) {
   if (!firebaseUser || !socialService) {
     socialDashboardUnsubscribe?.();
     socialDashboardUnsubscribe = null;
+    latestSocialDashboard = null;
+    pendingSocialDashboard = null;
     panel.innerHTML = `<div class="status-box">Google sign-in is required for friends and challenges.</div>`;
     return;
   }
 
+  // Start one realtime subscription for this signed-in user. The listener
+  // supplies complete dashboard snapshots, so rendering never starts another
+  // Firestore load or listener cycle.
   if (!socialDashboardUnsubscribe) {
+    panel.innerHTML = '<div class="status-box">Loading friends…</div>';
     socialDashboardUnsubscribe = socialService.subscribeDashboard(
-      dashboard => renderSocialPanel(dashboard),
-      error => console.error('Social realtime update failed:', error)
+      dashboard => {
+        latestSocialDashboard = dashboard;
+        if ($('profile-view')?.classList.contains('active')) {
+          renderSocialPanel(dashboard);
+        }
+      },
+      error => {
+        console.error('Social realtime update failed:', error);
+        if ($('profile-view')?.classList.contains('active')) {
+          panel.innerHTML = `<div class="status-box content-error">Friends could not be loaded. Check the console and try again.</div>`;
+        }
+      }
     );
+    return;
+  }
+
+  const dashboard = dashboardOverride || latestSocialDashboard;
+  if (!dashboard) {
+    panel.innerHTML = '<div class="status-box">Loading friends…</div>';
+    return;
   }
 
   if (socialDashboardLoading) {
-    socialDashboardQueued = true;
+    pendingSocialDashboard = dashboard;
     return;
   }
+
   socialDashboardLoading = true;
-  if (!dashboardOverride) panel.innerHTML = '<div class="status-box">Loading friends…</div>';
 
   try {
-    const synced = dashboardOverride ? null : await syncSocialProfile();
-    const dashboard = dashboardOverride || await socialService.loadDashboard();
-    const ownProfile = dashboard.profile || synced?.profile || {};
+    const ownProfile = dashboard.profile || {};
     const currentUid = firebaseUser.uid;
     latestSocialChallenges = new Map(dashboard.challenges.map(challenge => [challenge.id, challenge]));
 
@@ -2552,7 +2574,7 @@ async function renderSocialPanel(dashboardOverride = null) {
             action = `<button class="btn primary" data-challenge-response="accept" data-challenge-id="${challenge.id}">Accept</button><button class="btn secondary" data-challenge-response="decline" data-challenge-id="${challenge.id}">Decline</button>`;
           } else if (liveWaitMs > 0 && !ownScore) {
             action = `<span class="badge">Starts in ${Math.max(1, Math.ceil(liveWaitMs / 1000))}s</span>`;
-            setTimeout(() => renderSocialPanel(), Math.min(liveWaitMs + 100, 1100));
+            setTimeout(() => renderSocialPanel(latestSocialDashboard), Math.min(liveWaitMs + 100, 1100));
           } else if (playable) {
             action = `<button class="btn primary" data-play-challenge="${challenge.id}">Play</button>`;
           } else if (ownScore) {
@@ -2583,13 +2605,13 @@ async function renderSocialPanel(dashboardOverride = null) {
     $('send-friend-request-btn').onclick = async () => {
       const code = $('friend-code-input').value.trim().toUpperCase();
       if (!code) return toast('Enter a friend code first.');
-      try { await socialService.sendFriendRequest(code); toast('Friend request sent!'); await renderSocialPanel(); }
+      try { await socialService.sendFriendRequest(code); toast('Friend request sent!'); }
       catch (error) { console.error(error); toast(error?.message?.replace('FirebaseError: ', '') || 'Friend request failed.'); }
     };
 
     document.querySelectorAll('[data-friend-response]').forEach(button => {
       button.onclick = async () => {
-        try { await socialService.respondFriendRequest(button.dataset.requestId, button.dataset.friendResponse); toast(button.dataset.friendResponse === 'accept' ? 'Friend added!' : 'Request rejected.'); await renderSocialPanel(); }
+        try { await socialService.respondFriendRequest(button.dataset.requestId, button.dataset.friendResponse); toast(button.dataset.friendResponse === 'accept' ? 'Friend added!' : 'Request rejected.'); }
         catch (error) { console.error(error); toast('Could not update request.'); }
       };
     });
@@ -2600,7 +2622,7 @@ async function renderSocialPanel(dashboardOverride = null) {
 
     document.querySelectorAll('[data-challenge-response]').forEach(button => {
       button.onclick = async () => {
-        try { await socialService.respondChallenge(button.dataset.challengeId, button.dataset.challengeResponse); toast(button.dataset.challengeResponse === 'accept' ? 'Live challenge accepted — get ready!' : 'Challenge declined.'); await renderSocialPanel(); }
+        try { await socialService.respondChallenge(button.dataset.challengeId, button.dataset.challengeResponse); toast(button.dataset.challengeResponse === 'accept' ? 'Live challenge accepted — get ready!' : 'Challenge declined.'); }
         catch (error) { console.error(error); toast('Could not update challenge.'); }
       };
     });
@@ -2615,7 +2637,7 @@ async function renderSocialPanel(dashboardOverride = null) {
     document.querySelectorAll('[data-remove-friend]').forEach(button => {
       button.onclick = async () => {
         if (!confirm('Remove this friend?')) return;
-        try { await socialService.removeFriend(button.dataset.removeFriend); toast('Friend removed.'); await renderSocialPanel(); }
+        try { await socialService.removeFriend(button.dataset.removeFriend); toast('Friend removed.'); }
         catch (error) { console.error(error); toast('Could not remove friend.'); }
       };
     });
@@ -2623,18 +2645,19 @@ async function renderSocialPanel(dashboardOverride = null) {
     document.querySelectorAll('[data-block-user]').forEach(button => {
       button.onclick = async () => {
         if (!confirm('Block this learner? This also removes the friendship.')) return;
-        try { await socialService.blockUser(button.dataset.blockUser); toast('Learner blocked.'); await renderSocialPanel(); }
+        try { await socialService.blockUser(button.dataset.blockUser); toast('Learner blocked.'); }
         catch (error) { console.error(error); toast('Could not block learner.'); }
       };
     });
   } catch (error) {
     console.error(error);
-    panel.innerHTML = `<div class="status-box content-error">Friends backend is not ready yet. Deploy Cloud Functions and Firestore indexes, then refresh.</div>`;
+    panel.innerHTML = `<div class="status-box content-error">Friends could not be displayed. Check the console and try again.</div>`;
   } finally {
     socialDashboardLoading = false;
-    if (socialDashboardQueued) {
-      socialDashboardQueued = false;
-      setTimeout(() => renderSocialPanel(), 0);
+    if (pendingSocialDashboard) {
+      const nextDashboard = pendingSocialDashboard;
+      pendingSocialDashboard = null;
+      queueMicrotask(() => renderSocialPanel(nextDashboard));
     }
   }
 }
@@ -2739,6 +2762,11 @@ function closeAppModal() {
 
 async function performLogout() {
   try {
+    socialDashboardUnsubscribe?.();
+    socialDashboardUnsubscribe = null;
+    latestSocialDashboard = null;
+    pendingSocialDashboard = null;
+
     await savePlayer();
 
     if (firebaseUser && auth) {
