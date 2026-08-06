@@ -834,3 +834,18 @@ img, svg, canvas, video {
   .social-row .grow { flex: 1 1 calc(100% - 60px); }
   .social-row .btn { flex: 1 1 110px; }
 }
+
+
+/* v11.2 realtime social and challenge polish */
+.interactive-result,
+.interactive-total {
+  background: var(--card);
+  color: var(--text);
+  border: 2px solid var(--primary);
+}
+.challenge-type-help { margin: 1rem 0; }
+.social-row .badge { white-space: nowrap; }
+.social-row small + small { margin-top: .25rem; }
+@media (max-width: 640px) {
+  .social-row .badge { white-space: normal; }
+}

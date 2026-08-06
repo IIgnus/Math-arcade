@@ -1,0 +1,20 @@
+STEM Quest v11.2 — Realtime Challenges RC
+
+Frontend:
+- Friend requests, friendship changes and challenges update in realtime without manual refresh.
+- Challenge builder supports topic selection and Live Sprint or Play Whenever modes.
+- Competitive scoring awards 1,000 points per correct answer plus up to 500 speed points.
+- Live challenges use 10 seconds per question; asynchronous challenges use 15 seconds and a 72-hour window.
+- Friend challenges no longer change course mastery, lesson completion, stars, XP, mistakes or daily activity.
+- Fixed interactive result text contrast in dark mode.
+
+Backend:
+- Challenge documents now store type, topic, seed, question count, per-question time and expiry.
+- Asynchronous challenges activate immediately so the sender can play first.
+- Live challenges require acceptance and then activate with a short start window.
+- Score submissions store points, accuracy, correct count and total time.
+
+Deployment required:
+1. Replace website files on GitHub/Firebase Hosting.
+2. Deploy Cloud Functions: firebase deploy --only functions
+3. Firestore indexes/rules are unchanged from v11.1 unless your deployed copy is older.

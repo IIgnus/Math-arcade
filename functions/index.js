@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 
 initializeApp();
 const db = getFirestore();
@@ -169,23 +169,36 @@ exports.blockUser = onCall(async request => {
 exports.createChallenge = onCall(async request => {
   const creatorUid = requireAuth(request);
   const opponentUid = cleanText(request.data?.opponentUid, 128);
-  const questionSetId = cleanText(request.data?.questionSetId || 'weekly-mixed', 80);
+  const challengeType = cleanText(request.data?.challengeType || 'async', 16);
+  const topicId = cleanText(request.data?.topicId || 'mixed', 80);
+  const questionCount = Math.max(5, Math.min(12, Math.floor(Number(request.data?.questionCount || 8))));
+  const secondsPerQuestion = challengeType === 'live' ? 10 : 15;
+
+  if (!['live', 'async'].includes(challengeType)) throw new HttpsError('invalid-argument', 'Invalid challenge type.');
   if (!opponentUid || opponentUid === creatorUid) throw new HttpsError('invalid-argument', 'Choose another learner.');
 
   const friendshipSnap = await db.collection('friendships').doc(friendshipId(creatorUid, opponentUid)).get();
   if (!friendshipSnap.exists) throw new HttpsError('permission-denied', 'Challenges can only be sent to friends.');
 
-  const ref = await db.collection('challenges').add({
+  const now = Date.now();
+  const expiresAt = Timestamp.fromMillis(now + (challengeType === 'live' ? 15 * 60 * 1000 : 72 * 60 * 60 * 1000));
+  const ref = db.collection('challenges').doc();
+  await ref.set({
     creatorUid,
     opponentUid,
     participants: [creatorUid, opponentUid].sort(),
-    questionSetId,
-    status: 'pending',
+    challengeType,
+    topicId,
+    questionCount,
+    secondsPerQuestion,
+    seed: ref.id,
+    status: challengeType === 'async' ? 'active' : 'pending',
     scores: {},
+    expiresAt,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
-  return { challengeId: ref.id };
+  return { challengeId: ref.id, challengeType, status: challengeType === 'async' ? 'active' : 'pending' };
 });
 
 exports.respondChallenge = onCall(async request => {
@@ -201,10 +214,15 @@ exports.respondChallenge = onCall(async request => {
     const data = snap.data();
     if (data.opponentUid !== uid) throw new HttpsError('permission-denied', 'This challenge is not yours.');
     if (data.status !== 'pending') throw new HttpsError('failed-precondition', 'Challenge already handled.');
-    transaction.update(ref, {
+
+    const update = {
       status: action === 'accept' ? 'active' : 'declined',
       updatedAt: FieldValue.serverTimestamp()
-    });
+    };
+    if (action === 'accept' && data.challengeType === 'live') {
+      update.startsAt = Timestamp.fromMillis(Date.now() + 10_000);
+    }
+    transaction.update(ref, update);
   });
   return { ok: true };
 });
@@ -212,9 +230,17 @@ exports.respondChallenge = onCall(async request => {
 exports.submitChallengeScore = onCall(async request => {
   const uid = requireAuth(request);
   const challengeId = cleanText(request.data?.challengeId, 180);
-  const score = Number(request.data?.score);
+  const accuracy = Number(request.data?.accuracy);
+  const points = Number(request.data?.points);
+  const correct = Number(request.data?.correct);
   const time = Number(request.data?.time);
-  if (!challengeId || !Number.isFinite(score) || score < 0 || score > 100 || !Number.isFinite(time) || time < 0 || time > 7200) {
+  if (
+    !challengeId ||
+    !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 100 ||
+    !Number.isFinite(points) || points < 0 || points > 25000 ||
+    !Number.isFinite(correct) || correct < 0 || correct > 20 ||
+    !Number.isFinite(time) || time < 0 || time > 7200
+  ) {
     throw new HttpsError('invalid-argument', 'Invalid challenge result.');
   }
 
@@ -225,11 +251,18 @@ exports.submitChallengeScore = onCall(async request => {
     const data = snap.data();
     if (!data.participants.includes(uid)) throw new HttpsError('permission-denied', 'Not a participant.');
     if (!['active', 'complete'].includes(data.status)) throw new HttpsError('failed-precondition', 'Challenge is not active.');
+    if (data.expiresAt?.toMillis && data.expiresAt.toMillis() < Date.now()) throw new HttpsError('deadline-exceeded', 'This challenge expired.');
     if (data.scores?.[uid]) throw new HttpsError('already-exists', 'Your result was already submitted.');
 
     const scores = {
       ...(data.scores || {}),
-      [uid]: { score, time, submittedAt: new Date() }
+      [uid]: {
+        accuracy: Math.round(accuracy),
+        points: Math.round(points),
+        correct: Math.round(correct),
+        time: Math.round(time),
+        submittedAt: new Date()
+      }
     };
     transaction.update(ref, {
       scores,

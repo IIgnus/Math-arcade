@@ -35,8 +35,8 @@ import { createDeveloperTools } from './js/dev-tools.js';
 import { createBackendService } from './js/backend-service.js';
 import { createSocialService } from './js/social-service.js';
 
-const APP_VERSION = '11.1.0-rc1';
-const BUILD_LABEL = 'Social Backend RC';
+const APP_VERSION = '11.2.0-rc1';
+const BUILD_LABEL = 'Realtime Challenges RC';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -1085,6 +1085,10 @@ function startSession(config) {
   clearInterval(session.timer);
 
   session = createQuizSession(config);
+  if (session.mode === 'friend-challenge') {
+    session.competitivePoints = 0;
+    session.questionStartedAt = Date.now();
+  }
 
   $('scratch-box').classList.add('hidden');
   $('calculator-box').classList.add('hidden');
@@ -1122,8 +1126,9 @@ function renderQuestion() {
       ) * 100
     }%`;
 
-  $('quiz-hearts').textContent =
-    `❤️ ${session.hearts}`;
+  $('quiz-hearts').textContent = session.mode === 'friend-challenge'
+    ? `⚔️ ${session.competitivePoints || 0} pts`
+    : `❤️ ${session.hearts}`;
 
   $('hud-topic').textContent =
     findTopic(question.topicId)?.title ||
@@ -1157,6 +1162,7 @@ function renderQuestion() {
   $('calculator-btn').classList.toggle('hidden', allowedMode === 'none');
   configureCalculatorForQuestion(question);
 
+  session.questionStartedAt = Date.now();
   renderAnswer(question);
 
   const baseTimer = session.config.timer || 0;
@@ -1269,8 +1275,11 @@ function gradeAnswer(
   clearInterval(session.timer);
 
   const correct = isAnswerCorrect(question, value, timedOut);
+  const isFriendChallenge = session.mode === 'friend-challenge';
 
-  recordQuestionAttempt(player, question.id, correct);
+  if (!isFriendChallenge) {
+    recordQuestionAttempt(player, question.id, correct);
+  }
 
   const feedback =
     $('feedback-box');
@@ -1280,14 +1289,23 @@ function gradeAnswer(
   if (correct) {
     session.correct++;
 
-    player.xp += question.xp || 10;
-    player.points += question.xp || 10;
+    let challengePoints = 0;
+    if (isFriendChallenge) {
+      const elapsed = Math.max(0, Date.now() - (session.questionStartedAt || Date.now()));
+      const questionWindow = Math.max(1, Number(session.config.timer || 15)) * 1000;
+      const speedRatio = Math.max(0, 1 - (elapsed / questionWindow));
+      challengePoints = 1000 + Math.round(speedRatio * 500);
+      session.competitivePoints = (session.competitivePoints || 0) + challengePoints;
+    } else {
+      player.xp += question.xp || 10;
+      player.points += question.xp || 10;
+    }
 
     feedback.classList.add('correct');
 
     feedback.innerHTML = `
       <h3>
-        ✅ Correct!
+        ✅ Correct!${isFriendChallenge ? ` +${challengePoints} points` : ''}
       </h3>
 
       <p>
@@ -1311,12 +1329,14 @@ function gradeAnswer(
       sound(880, 0.12);
     }, 90);
 
-    removeMistake(question.id);
+    if (!isFriendChallenge) removeMistake(question.id);
   } else {
-    session.hearts = Math.max(
-      0,
-      session.hearts - 1
-    );
+    if (!isFriendChallenge) {
+      session.hearts = Math.max(
+        0,
+        session.hearts - 1
+      );
+    }
 
     feedback.classList.add('wrong');
 
@@ -1367,7 +1387,7 @@ function gradeAnswer(
       clicked.classList.add('wrong');
     }
 
-    recordMistake(question);
+    if (!isFriendChallenge) recordMistake(question);
 
     sound(
       170,
@@ -1384,8 +1404,9 @@ function gradeAnswer(
       element.disabled = true;
     });
 
-  $('quiz-hearts').textContent =
-    `❤️ ${session.hearts}`;
+  $('quiz-hearts').textContent = isFriendChallenge
+    ? `⚔️ ${session.competitivePoints || 0} pts`
+    : `❤️ ${session.hearts}`;
 
   $('next-btn').classList.remove(
     'hidden'
@@ -1402,11 +1423,10 @@ function gradeAnswer(
       'Continue';
   }
 
-  updateTopicMastery(
-    question.topicId
-  );
-
-  savePlayer();
+  if (!isFriendChallenge) {
+    updateTopicMastery(question.topicId);
+    savePlayer();
+  }
 }
 
 function recordMistake(question) {
@@ -1570,13 +1590,14 @@ function finishSession() {
   const xpEarned =
     session.correct * 10;
 
-  $('result-score').textContent =
-    `${score}%`;
+  const challengePoints = Math.round(session.competitivePoints || 0);
+  $('result-score').textContent = session.mode === 'friend-challenge'
+    ? `${challengePoints} pts`
+    : `${score}%`;
 
-  $('result-summary').textContent =
-    `${session.correct} of ${
-      session.questions.length
-    } correct in ${time} seconds.`;
+  $('result-summary').textContent = session.mode === 'friend-challenge'
+    ? `${session.correct} of ${session.questions.length} correct (${score}% accuracy) in ${time} seconds.`
+    : `${session.correct} of ${session.questions.length} correct in ${time} seconds.`;
 
   $('result-title').textContent =
     score >= 90
@@ -1592,17 +1613,12 @@ function finishSession() {
         ? '🎉'
         : '🌱';
 
-  $('result-rewards').innerHTML = `
-    <span class="reward-chip">
-      ⚡ +${xpEarned} XP
-    </span>
-
-    <span class="reward-chip">
-      🎯 ${score}% accuracy
-    </span>
-  `;
+  $('result-rewards').innerHTML = session.mode === 'friend-challenge'
+    ? `<span class="reward-chip">⚔️ ${challengePoints} points</span><span class="reward-chip">🎯 ${score}% accuracy</span>`
+    : `<span class="reward-chip">⚡ +${xpEarned} XP</span><span class="reward-chip">🎯 ${score}% accuracy</span>`;
 
   if (
+    session.mode !== 'friend-challenge' &&
     session.config.lessonId &&
     score >= 60 &&
     !player.completedLessons.includes(
@@ -1655,15 +1671,23 @@ function finishSession() {
   }
 
   if (session.mode === 'friend-challenge' && session.config.challengeId && socialService) {
-    socialService.submitChallengeScore(session.config.challengeId, score, time)
-      .then(() => toast('Challenge score submitted!'))
+    socialService.submitChallengeScore(session.config.challengeId, {
+      accuracy: score,
+      points: challengePoints,
+      correct: session.correct,
+      time
+    })
+      .then(() => {
+        toast('Challenge score submitted!');
+        renderSocialPanel();
+      })
       .catch(error => {
         console.error(error);
         toast('Challenge score could not be submitted.');
       });
   }
 
-  if (session.config.lessonId) {
+  if (session.mode !== 'friend-challenge' && session.config.lessonId) {
     const lessonId = session.config.lessonId;
     const stars = calculateLessonStars(score, session.hearts);
 
@@ -1677,9 +1701,11 @@ function finishSession() {
     );
   }
 
-  checkCourseCompletionRewards();
-  addDailyActivity();
-  savePlayer();
+  if (session.mode !== 'friend-challenge') {
+    checkCourseCompletionRewards();
+    addDailyActivity();
+    savePlayer();
+  }
 
   appState.write({ viewId: 'result-view', activeQuiz: false });
   showView('result-view');
@@ -2376,38 +2402,128 @@ $('save-profile-btn').onclick = async () => {
 
 
 let socialDashboardLoading = false;
+let socialDashboardQueued = false;
+let socialDashboardUnsubscribe = null;
+let latestSocialChallenges = new Map();
 
-async function renderSocialPanel() {
+function challengeQuestions(challenge) {
+  if (challenge.topicId && challenge.topicId !== 'mixed') {
+    const topic = findTopic(challenge.topicId);
+    if (topic) return getTopicQuestions(topic);
+  }
+  return allQuestions();
+}
+
+function startFriendChallenge(challenge) {
+  const questions = seededShuffle(
+    challengeQuestions(challenge),
+    challenge.seed || challenge.id
+  ).slice(0, Math.min(Number(challenge.questionCount || 8), challengeQuestions(challenge).length));
+
+  startSession({
+    mode: 'friend-challenge',
+    challengeId: challenge.id,
+    questions,
+    timer: Number(challenge.secondsPerQuestion || (challenge.challengeType === 'live' ? 10 : 15))
+  });
+}
+
+function openChallengeBuilder(friendUid, friendName) {
+  const topicOptions = Object.values(COURSES).flatMap(course =>
+    course.topics.map(topic => `<option value="${escapeHtml(topic.id)}">${escapeHtml(course.title)} — ${escapeHtml(topic.title)}</option>`)
+  ).join('');
+
+  modal(`
+    <p class="eyebrow">NEW FRIEND CHALLENGE</p>
+    <h2>Challenge ${escapeHtml(friendName || 'your friend')}</h2>
+    <label class="interactive-control">Topic
+      <select id="challenge-topic-select" class="field">
+        <option value="mixed">Mixed topics</option>
+        ${topicOptions}
+      </select>
+    </label>
+    <label class="interactive-control">Challenge type
+      <select id="challenge-type-select" class="field">
+        <option value="async">Play whenever — 72 hour deadline</option>
+        <option value="live">Live sprint — both players, 10 seconds per question</option>
+      </select>
+    </label>
+    <div class="challenge-type-help status-box">
+      Correct answers earn 1,000 points plus up to 500 speed points. Challenge attempts do not change course mastery, lesson completion, XP or mistakes.
+    </div>
+    <button id="create-friend-challenge-btn" class="btn primary wide">Create challenge</button>
+  `);
+
+  $('create-friend-challenge-btn').onclick = async () => {
+    const button = $('create-friend-challenge-btn');
+    button.disabled = true;
+    button.textContent = 'Creating…';
+    try {
+      const challengeType = $('challenge-type-select').value;
+      const topicId = $('challenge-topic-select').value;
+      const result = await socialService.createChallenge(friendUid, {
+        challengeType,
+        topicId,
+        questionCount: 8
+      });
+      closeAppModal();
+      toast(challengeType === 'live' ? 'Live challenge invitation sent!' : 'Challenge created — you can play now!');
+      await renderSocialPanel();
+      if (challengeType === 'async') {
+        startFriendChallenge({
+          id: result.challengeId,
+          seed: result.challengeId,
+          challengeType,
+          topicId,
+          questionCount: 8,
+          secondsPerQuestion: 15
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast(error?.message?.replace('FirebaseError: ', '') || 'Could not create challenge.');
+      button.disabled = false;
+      button.textContent = 'Create challenge';
+    }
+  };
+}
+
+async function renderSocialPanel(dashboardOverride = null) {
   const panel = $('social-panel');
   if (!panel) return;
 
   if (!firebaseUser || !socialService) {
-    panel.innerHTML = `
-      <div class="status-box">Google sign-in is required for friends and challenges.</div>
-    `;
+    socialDashboardUnsubscribe?.();
+    socialDashboardUnsubscribe = null;
+    panel.innerHTML = `<div class="status-box">Google sign-in is required for friends and challenges.</div>`;
     return;
   }
 
-  if (socialDashboardLoading) return;
+  if (!socialDashboardUnsubscribe) {
+    socialDashboardUnsubscribe = socialService.subscribeDashboard(
+      dashboard => renderSocialPanel(dashboard),
+      error => console.error('Social realtime update failed:', error)
+    );
+  }
+
+  if (socialDashboardLoading) {
+    socialDashboardQueued = true;
+    return;
+  }
   socialDashboardLoading = true;
-  panel.innerHTML = '<div class="status-box">Loading friends…</div>';
+  if (!dashboardOverride) panel.innerHTML = '<div class="status-box">Loading friends…</div>';
 
   try {
-    const synced = await syncSocialProfile();
-    const dashboard = await socialService.loadDashboard();
+    const synced = dashboardOverride ? null : await syncSocialProfile();
+    const dashboard = dashboardOverride || await socialService.loadDashboard();
     const ownProfile = dashboard.profile || synced?.profile || {};
     const currentUid = firebaseUser.uid;
+    latestSocialChallenges = new Map(dashboard.challenges.map(challenge => [challenge.id, challenge]));
 
     const requestCards = dashboard.incoming.length
       ? dashboard.incoming.map(request => {
           const profile = dashboard.profiles[request.senderUid] || {};
-          return `
-            <div class="social-row">
-              <div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div>
-              <div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Sent you a friend request</small></div>
-              <button class="btn primary" data-friend-response="accept" data-request-id="${escapeHtml(request.id)}">Accept</button>
-              <button class="btn secondary" data-friend-response="reject" data-request-id="${escapeHtml(request.id)}">Reject</button>
-            </div>`;
+          return `<div class="social-row"><div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div><div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Sent you a friend request</small></div><button class="btn primary" data-friend-response="accept" data-request-id="${escapeHtml(request.id)}">Accept</button><button class="btn secondary" data-friend-response="reject" data-request-id="${escapeHtml(request.id)}">Reject</button></div>`;
         }).join('')
       : '<p class="muted">No pending friend requests.</p>';
 
@@ -2415,14 +2531,7 @@ async function renderSocialPanel() {
       ? dashboard.friendships.map(friendship => {
           const friendUid = friendship.participants.find(uid => uid !== currentUid);
           const profile = dashboard.profiles[friendUid] || {};
-          return `
-            <div class="social-row">
-              <div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div>
-              <div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Level ${Number(profile.level || 1)}</small></div>
-              <button class="btn primary" data-challenge-friend="${escapeHtml(friendUid)}">Challenge</button>
-              <button class="btn secondary" data-remove-friend="${escapeHtml(friendUid)}">Remove</button>
-              <button class="btn danger" data-block-user="${escapeHtml(friendUid)}">Block</button>
-            </div>`;
+          return `<div class="social-row"><div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div><div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Level ${Number(profile.level || 1)}</small></div><button class="btn primary" data-challenge-friend="${escapeHtml(friendUid)}" data-friend-name="${escapeHtml(profile.displayName || 'Learner')}">Challenge</button><button class="btn secondary" data-remove-friend="${escapeHtml(friendUid)}">Remove</button><button class="btn danger" data-block-user="${escapeHtml(friendUid)}">Block</button></div>`;
         }).join('')
       : '<p class="muted">Add a friend using their code to start challenging each other.</p>';
 
@@ -2433,96 +2542,80 @@ async function renderSocialPanel() {
           const ownScore = challenge.scores?.[currentUid];
           const otherScore = challenge.scores?.[otherUid];
           const incomingPending = challenge.status === 'pending' && challenge.opponentUid === currentUid;
-          const playable = challenge.status === 'active' && !ownScore;
+          const startsAtMs = challenge.startsAt?.toMillis ? challenge.startsAt.toMillis() : 0;
+          const liveWaitMs = challenge.challengeType === 'live' && startsAtMs ? Math.max(0, startsAtMs - Date.now()) : 0;
+          const playable = challenge.status === 'active' && !ownScore && liveWaitMs <= 0;
+          const topicName = challenge.topicId === 'mixed' ? 'Mixed topics' : (findTopic(challenge.topicId)?.title || 'Selected topic');
+          const typeName = challenge.challengeType === 'live' ? 'Live sprint' : 'Play whenever';
           let action = '';
           if (incomingPending) {
             action = `<button class="btn primary" data-challenge-response="accept" data-challenge-id="${challenge.id}">Accept</button><button class="btn secondary" data-challenge-response="decline" data-challenge-id="${challenge.id}">Decline</button>`;
+          } else if (liveWaitMs > 0 && !ownScore) {
+            action = `<span class="badge">Starts in ${Math.max(1, Math.ceil(liveWaitMs / 1000))}s</span>`;
+            setTimeout(() => renderSocialPanel(), Math.min(liveWaitMs + 100, 1100));
           } else if (playable) {
             action = `<button class="btn primary" data-play-challenge="${challenge.id}">Play</button>`;
           } else if (ownScore) {
-            action = `<span class="badge">Your score: ${ownScore.score}%</span>`;
+            action = `<span class="badge">${ownScore.points || 0} pts</span>`;
           } else {
             action = `<span class="badge">${escapeHtml(challenge.status)}</span>`;
           }
-          const result = challenge.status === 'complete' && ownScore && otherScore
-            ? `<small>${ownScore.score > otherScore.score ? '🏆 You won' : ownScore.score < otherScore.score ? 'Good try — rematch anytime' : '🤝 Draw'} · ${ownScore.score}% vs ${otherScore.score}%</small>`
-            : '<small>10 shared mixed questions</small>';
+
+          let result = `<small>${escapeHtml(typeName)} · ${escapeHtml(topicName)} · ${Number(challenge.secondsPerQuestion || 15)}s per question</small>`;
+          if (challenge.status === 'complete' && ownScore && otherScore) {
+            const won = ownScore.points > otherScore.points || (ownScore.points === otherScore.points && ownScore.time < otherScore.time);
+            const drew = ownScore.points === otherScore.points && ownScore.time === otherScore.time;
+            result += `<small>${drew ? '🤝 Draw' : won ? '🏆 You won' : 'Good try — rematch anytime'} · ${ownScore.points} vs ${otherScore.points} points</small>`;
+          } else if (ownScore && !otherScore) {
+            result += `<small>Waiting for ${escapeHtml(profile.displayName || 'your friend')} · your score ${ownScore.points} points</small>`;
+          }
           return `<div class="social-row"><div class="social-avatar">⚔️</div><div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong>${result}</div>${action}</div>`;
         }).join('')
       : '<p class="muted">No challenges yet.</p>';
 
     panel.innerHTML = `
-      <div class="friend-code-card">
-        <div><small>Your private friend code</small><strong id="friend-code-copy">${escapeHtml(ownProfile.friendCode || 'Creating…')}</strong></div>
-        <p class="tiny muted">Share this code only with people you know. It does not reveal your email.</p>
-      </div>
-      <div class="social-add-row">
-        <input id="friend-code-input" class="field" maxlength="12" autocomplete="off" placeholder="Enter friend code">
-        <button id="send-friend-request-btn" class="btn primary">Add friend</button>
-      </div>
+      <div class="friend-code-card"><div><small>Your private friend code</small><strong id="friend-code-copy">${escapeHtml(ownProfile.friendCode || 'Creating…')}</strong></div><p class="tiny muted">Share this code only with people you know. It does not reveal your email.</p></div>
+      <div class="social-add-row"><input id="friend-code-input" class="field" maxlength="12" autocomplete="off" placeholder="Enter friend code"><button id="send-friend-request-btn" class="btn primary">Add friend</button></div>
       <h3>Requests</h3><div class="social-list">${requestCards}</div>
       <h3>Friends</h3><div class="social-list">${friendCards}</div>
-      <h3>Challenges</h3><div class="social-list">${challengeCards}</div>
-    `;
+      <h3>Challenges</h3><div class="social-list">${challengeCards}</div>`;
 
     $('send-friend-request-btn').onclick = async () => {
       const code = $('friend-code-input').value.trim().toUpperCase();
       if (!code) return toast('Enter a friend code first.');
-      try {
-        await socialService.sendFriendRequest(code);
-        toast('Friend request sent!');
-        renderSocialPanel();
-      } catch (error) {
-        console.error(error);
-        toast(error?.message?.replace('FirebaseError: ', '') || 'Friend request failed.');
-      }
+      try { await socialService.sendFriendRequest(code); toast('Friend request sent!'); await renderSocialPanel(); }
+      catch (error) { console.error(error); toast(error?.message?.replace('FirebaseError: ', '') || 'Friend request failed.'); }
     };
 
     document.querySelectorAll('[data-friend-response]').forEach(button => {
       button.onclick = async () => {
-        try {
-          await socialService.respondFriendRequest(button.dataset.requestId, button.dataset.friendResponse);
-          toast(button.dataset.friendResponse === 'accept' ? 'Friend added!' : 'Request rejected.');
-          renderSocialPanel();
-        } catch (error) { console.error(error); toast('Could not update request.'); }
+        try { await socialService.respondFriendRequest(button.dataset.requestId, button.dataset.friendResponse); toast(button.dataset.friendResponse === 'accept' ? 'Friend added!' : 'Request rejected.'); await renderSocialPanel(); }
+        catch (error) { console.error(error); toast('Could not update request.'); }
       };
     });
 
     document.querySelectorAll('[data-challenge-friend]').forEach(button => {
-      button.onclick = async () => {
-        try {
-          await socialService.createChallenge(button.dataset.challengeFriend);
-          toast('Challenge invitation sent!');
-          renderSocialPanel();
-        } catch (error) { console.error(error); toast('Could not create challenge.'); }
-      };
+      button.onclick = () => openChallengeBuilder(button.dataset.challengeFriend, button.dataset.friendName);
     });
 
     document.querySelectorAll('[data-challenge-response]').forEach(button => {
       button.onclick = async () => {
-        try {
-          await socialService.respondChallenge(button.dataset.challengeId, button.dataset.challengeResponse);
-          toast(button.dataset.challengeResponse === 'accept' ? 'Challenge accepted!' : 'Challenge declined.');
-          renderSocialPanel();
-        } catch (error) { console.error(error); toast('Could not update challenge.'); }
+        try { await socialService.respondChallenge(button.dataset.challengeId, button.dataset.challengeResponse); toast(button.dataset.challengeResponse === 'accept' ? 'Live challenge accepted — get ready!' : 'Challenge declined.'); await renderSocialPanel(); }
+        catch (error) { console.error(error); toast('Could not update challenge.'); }
       };
     });
 
     document.querySelectorAll('[data-play-challenge]').forEach(button => {
       button.onclick = () => {
-        startSession({
-          mode: 'friend-challenge',
-          challengeId: button.dataset.playChallenge,
-          questions: seededShuffle(allQuestions(), button.dataset.playChallenge).slice(0, 10),
-          timer: 45
-        });
+        const challenge = latestSocialChallenges.get(button.dataset.playChallenge);
+        if (challenge) startFriendChallenge(challenge);
       };
     });
 
     document.querySelectorAll('[data-remove-friend]').forEach(button => {
       button.onclick = async () => {
         if (!confirm('Remove this friend?')) return;
-        try { await socialService.removeFriend(button.dataset.removeFriend); toast('Friend removed.'); renderSocialPanel(); }
+        try { await socialService.removeFriend(button.dataset.removeFriend); toast('Friend removed.'); await renderSocialPanel(); }
         catch (error) { console.error(error); toast('Could not remove friend.'); }
       };
     });
@@ -2530,18 +2623,19 @@ async function renderSocialPanel() {
     document.querySelectorAll('[data-block-user]').forEach(button => {
       button.onclick = async () => {
         if (!confirm('Block this learner? This also removes the friendship.')) return;
-        try { await socialService.blockUser(button.dataset.blockUser); toast('Learner blocked.'); renderSocialPanel(); }
+        try { await socialService.blockUser(button.dataset.blockUser); toast('Learner blocked.'); await renderSocialPanel(); }
         catch (error) { console.error(error); toast('Could not block learner.'); }
       };
     });
   } catch (error) {
     console.error(error);
-    panel.innerHTML = `
-      <div class="status-box content-error">
-        Friends backend is not ready yet. Deploy Cloud Functions and Firestore indexes, then refresh.
-      </div>`;
+    panel.innerHTML = `<div class="status-box content-error">Friends backend is not ready yet. Deploy Cloud Functions and Firestore indexes, then refresh.</div>`;
   } finally {
     socialDashboardLoading = false;
+    if (socialDashboardQueued) {
+      socialDashboardQueued = false;
+      setTimeout(() => renderSocialPanel(), 0);
+    }
   }
 }
 

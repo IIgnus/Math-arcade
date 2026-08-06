@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   where
@@ -38,30 +39,39 @@ export function createSocialService({ app, db, getUser }) {
     return result.data;
   }
 
-  async function loadDashboard() {
-    const user = requireUser();
-    const profileSnap = await getDoc(doc(db, 'publicProfiles', user.uid));
-
-    const [incomingSnap, friendshipsSnap, challengesSnap] = await Promise.all([
-      getDocs(query(
+  function dashboardQueries(uid) {
+    return {
+      incoming: query(
         collection(db, 'friendRequests'),
-        where('recipientUid', '==', user.uid),
+        where('recipientUid', '==', uid),
         where('status', '==', 'pending'),
         orderBy('createdAt', 'desc'),
         limit(20)
-      )),
-      getDocs(query(
+      ),
+      friendships: query(
         collection(db, 'friendships'),
-        where('participants', 'array-contains', user.uid),
+        where('participants', 'array-contains', uid),
         orderBy('updatedAt', 'desc'),
         limit(50)
-      )),
-      getDocs(query(
+      ),
+      challenges: query(
         collection(db, 'challenges'),
-        where('participants', 'array-contains', user.uid),
+        where('participants', 'array-contains', uid),
         orderBy('updatedAt', 'desc'),
         limit(30)
-      ))
+      )
+    };
+  }
+
+  async function loadDashboard() {
+    const user = requireUser();
+    const queries = dashboardQueries(user.uid);
+    const profileSnap = await getDoc(doc(db, 'publicProfiles', user.uid));
+
+    const [incomingSnap, friendshipsSnap, challengesSnap] = await Promise.all([
+      getDocs(queries.incoming),
+      getDocs(queries.friendships),
+      getDocs(queries.challenges)
     ]);
 
     const incoming = incomingSnap.docs.map(item => ({ id: item.id, ...item.data() }));
@@ -92,6 +102,54 @@ export function createSocialService({ app, db, getUser }) {
     };
   }
 
+  function subscribeDashboard(onChange, onError = console.error) {
+    const user = requireUser();
+    const queries = dashboardQueries(user.uid);
+    let stopped = false;
+    let refreshTimer = null;
+    let refreshing = false;
+    let queued = false;
+
+    const refresh = async () => {
+      if (stopped) return;
+      if (refreshing) {
+        queued = true;
+        return;
+      }
+      refreshing = true;
+      try {
+        onChange(await loadDashboard());
+      } catch (error) {
+        onError(error);
+      } finally {
+        refreshing = false;
+        if (queued) {
+          queued = false;
+          scheduleRefresh();
+        }
+      }
+    };
+
+    const scheduleRefresh = () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(refresh, 120);
+    };
+
+    const unsubscribers = [
+      onSnapshot(doc(db, 'publicProfiles', user.uid), scheduleRefresh, onError),
+      onSnapshot(queries.incoming, scheduleRefresh, onError),
+      onSnapshot(queries.friendships, scheduleRefresh, onError),
+      onSnapshot(queries.challenges, scheduleRefresh, onError)
+    ];
+
+    scheduleRefresh();
+    return () => {
+      stopped = true;
+      clearTimeout(refreshTimer);
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }
+
   async function sendFriendRequest(friendCode) {
     requireUser();
     return (await sendFriendRequestCall({ friendCode })).data;
@@ -112,9 +170,9 @@ export function createSocialService({ app, db, getUser }) {
     return (await blockUserCall({ targetUid })).data;
   }
 
-  async function createChallenge(opponentUid, questionSetId = 'weekly-mixed') {
+  async function createChallenge(opponentUid, options = {}) {
     requireUser();
-    return (await createChallengeCall({ opponentUid, questionSetId })).data;
+    return (await createChallengeCall({ opponentUid, ...options })).data;
   }
 
   async function respondChallenge(challengeId, action) {
@@ -122,14 +180,15 @@ export function createSocialService({ app, db, getUser }) {
     return (await respondChallengeCall({ challengeId, action })).data;
   }
 
-  async function submitChallengeScore(challengeId, score, time) {
+  async function submitChallengeScore(challengeId, result) {
     requireUser();
-    return (await submitChallengeScoreCall({ challengeId, score, time })).data;
+    return (await submitChallengeScoreCall({ challengeId, ...result })).data;
   }
 
   return {
     ensureProfile,
     loadDashboard,
+    subscribeDashboard,
     sendFriendRequest,
     respondFriendRequest,
     removeFriend,
