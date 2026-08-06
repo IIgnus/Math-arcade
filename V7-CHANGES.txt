@@ -1,0 +1,20 @@
+STEM Quest v7 Accessibility + Visual Polish
+
+UPDATED: index.html, styles.css, app.js, js/quiz-engine.js
+UNCHANGED: course-data.js, Firebase rules, and the remaining modules.
+
+Features:
+- Desktop profile button in the top-right with live level
+- Home profile icon now opens Profile (graduate hat removed)
+- Question counter and pause/resume
+- Text, multiple accepted, numerical and fraction answers
+- Randomised multiple-choice display while preserving correct answers
+- Common-mistake feedback support
+- Font-size, high-contrast, extra-time and speech-speed settings
+- Strong keyboard focus and larger mobile touch targets
+- White glow, slight enlargement and subtle idle colour movement on controls
+- Reduced-motion setting disables the new ambient animation
+
+Future interactive lesson system:
+A later content upgrade can add Brilliant-style manipulatives (sliders, draggable bars,
+number lines, graphs and visual models) without changing the question engine.

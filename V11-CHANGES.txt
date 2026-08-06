@@ -1,0 +1,24 @@
+STEM Quest v11 Release Candidate
+
+Replace the complete project with this package, or update:
+- index.html
+- styles.css
+- app.js
+- firestore.rules
+
+Add:
+- js/backend-service.js
+- firebase.json
+- firestore.indexes.json
+- functions/
+- BACKEND-SETUP.md
+
+Highlights:
+- Mobile STEM Quest name restored beside the brain icon
+- First-time onboarding walkthrough
+- Question-level report shortcut
+- App version and Firebase service status
+- Optional Remote Config and Analytics integration
+- Production developer-tool controls prepared
+- Secure Cloud Functions starter for future friend challenges
+- Expanded Firestore rules and Emulator configuration

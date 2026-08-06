@@ -1,0 +1,9 @@
+STEM Quest v10.3
+
+Replace app.js only.
+
+Change:
+- Every Google or local login now opens the main Home/Learn screen.
+- Previous lesson, quiz, result, profile, or other saved screen state is cleared on login.
+- Any leftover quiz timer/session state is cleared.
+- Learning progress, XP, mastery, stars and account data are not reset.

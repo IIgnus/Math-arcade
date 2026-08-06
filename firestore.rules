@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner(userId) { return signedIn() && request.auth.uid == userId; }
+    function participant() { return signedIn() && request.auth.uid in resource.data.participants; }
+
+    match /users/{userId} {
+      allow read, create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    match /publicProfiles/{userId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /friendCodes/{code} {
+      allow read, write: if false;
+    }
+
+    match /friendRequests/{requestId} {
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.senderUid
+          || request.auth.uid == resource.data.recipientUid);
+      allow write: if false;
+    }
+
+    match /friendships/{friendshipId} {
+      allow read: if participant();
+      allow write: if false;
+    }
+
+    match /blocks/{blockId} {
+      allow read, write: if false;
+    }
+
+    match /challenges/{challengeId} {
+      allow read: if participant();
+      allow write: if false;
+    }
+
+    match /tournaments/{tournamentId}/scores/{userId} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100
+        && request.resource.data.time is number
+        && request.resource.data.time >= 0
+        && request.resource.data.time <= 7200;
+      allow delete: if false;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.category is string
+        && request.resource.data.category.size() <= 60
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 1000;
+      allow read, update, delete: if false;
+    }
+  }
+}

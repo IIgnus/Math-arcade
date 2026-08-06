@@ -60,4 +60,3 @@ export function calculateSessionScore(session) {
   const total = session.questions.length;
   return total ? Math.round((session.correct / total) * 100) : 0;
 }
-

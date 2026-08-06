@@ -1,0 +1,18 @@
+STEM Quest v10.2
+
+Includes all v10.1 developer preview fixes plus real iPhone/mobile layout fixes.
+
+Replace:
+- app.js
+- styles.css
+- js/dev-tools.js
+
+Main mobile fixes:
+- Removes page-level horizontal overflow
+- Keeps the pathway panel and topic cards inside the viewport
+- Removes alternating card offsets on phones
+- Makes course tabs swipe horizontally
+- Makes placement check fit the screen
+- Shortens the mobile header to an icon
+- Adds iPhone safe-area spacing
+- Prevents long text and progress bars from clipping

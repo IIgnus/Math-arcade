@@ -291,11 +291,13 @@
           <button id="save-profile-btn" class="btn primary">Save profile</button>
         </div>
 
-        <div class="profile-section future-social-card">
-          <p class="eyebrow">SOCIAL — FUTURE UPDATE</p>
-          <h2>Friends and study groups</h2>
-          <p class="muted">A future update can add friend requests, private study groups and shared progress challenges. This is intentionally disabled until privacy controls and moderation are ready.</p>
-          <button class="btn secondary" disabled>Friends coming later</button>
+        <div class="profile-section social-card">
+          <p class="eyebrow">FRIENDS & CHALLENGES</p>
+          <h2>Learn together</h2>
+          <p class="muted">Add people you know using a private friend code, then send them a ten-question challenge.</p>
+          <div id="social-panel" aria-live="polite">
+            <div class="status-box">Google sign-in is required for friends and challenges.</div>
+          </div>
         </div>
 
         <div class="profile-section">
@@ -407,4 +409,3 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
-

@@ -1,0 +1,27 @@
+STEM Quest v10 — Mobile Polish + Developer Testing Tools
+
+REPLACE:
+- app.js
+- styles.css
+
+ADD:
+- js/dev-tools.js
+
+KEEP all other v9 files unchanged.
+
+Developer tools:
+- Press Ctrl + Shift + D to enable/disable on the current device.
+- Or add ?dev=1 to the site URL once.
+- Jump directly to a course/topic/lesson.
+- Show question IDs and calculator modes.
+- Unlock all learning content for testing.
+- Reset learning progress.
+- Toggle a phone-width desktop preview.
+- View content validation counts.
+
+Mobile improvements:
+- Responsive dashboard and lesson cards.
+- Safer sticky controls and bottom navigation spacing.
+- Improved narrow-screen quiz, calculator, scratchpad and profile layouts.
+- Small-screen top bar simplification.
+- Landscape fallbacks.

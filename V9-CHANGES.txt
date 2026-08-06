@@ -1,0 +1,28 @@
+STEM Quest v9 — Complete Interactive Lesson Library
+
+Added reusable interactive blocks:
+- quantity-bars
+- number-line
+- place-value
+- fraction-bars
+- balance-scale
+- area-model
+- coordinate-grid
+- angle-explorer
+- function-slider / live-graph
+- probability-spinner
+
+Also added:
+- responsive mobile layouts
+- reduced-motion support
+- accessible labels and live results
+- automatic validation of interactive block types
+- examples embedded across arithmetic, fractions, algebra, geometry and percentages
+
+Replace:
+- course-data.js
+- styles.css
+- js/interactive-lessons.js
+- js/content-validator.js
+
+Keep every other current v8 file unchanged.

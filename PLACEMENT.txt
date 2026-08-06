@@ -1,0 +1,18 @@
+Replace the root app.js with the new app.js.
+
+Place these files inside the existing js folder:
+- quiz-engine.js
+- progression.js
+- calculator.js
+- scratchpad.js
+
+Keep your working content-loader.js and content-validator.js in the same js folder.
+
+Final structure:
+app.js
+js/content-loader.js
+js/content-validator.js
+js/quiz-engine.js
+js/progression.js
+js/calculator.js
+js/scratchpad.js

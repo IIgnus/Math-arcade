@@ -1,0 +1,23 @@
+STEM Quest v8 — Profile Identity + Interactive Lessons
+
+Replace:
+- index.html
+- styles.css
+- app.js
+- course-data.js
+
+Add:
+- js/interactive-lessons.js
+
+Keep all other v7/v6 modules unchanged.
+
+New now:
+- Sticky Back button on Profile
+- Larger home profile picture
+- 12 selectable profile avatars
+- Edit-pencil button on avatar
+- Profile description
+- Optional region with hidden/no-country default
+- Future Friends placeholder (not active)
+- Reusable interactive lesson renderer
+- Addition examples include adjustable quantity bars and number line

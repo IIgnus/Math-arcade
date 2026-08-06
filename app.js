@@ -33,9 +33,10 @@ import { createErrorHandler } from './js/error-handler.js';
 import { renderInteractiveLesson } from './js/interactive-lessons.js';
 import { createDeveloperTools } from './js/dev-tools.js';
 import { createBackendService } from './js/backend-service.js';
+import { createSocialService } from './js/social-service.js';
 
-const APP_VERSION = '11.0.0-rc1';
-const BUILD_LABEL = 'Release Candidate';
+const APP_VERSION = '11.1.0-rc1';
+const BUILD_LABEL = 'Social Backend RC';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyD4pfgVOqGnOfeVCbRdjHaUt1xzK0Cv6wQ',
@@ -137,6 +138,7 @@ let firebaseApp = null;
 let auth = null;
 let db = null;
 let backendService = null;
+let socialService = null;
 let backendFlags = { showOnboarding: true, tournamentsEnabled: true, developerToolsEnabled: false, maintenanceMessage: '' };
 let firebaseEnabled = false;
 let firebaseUser = null;
@@ -185,6 +187,11 @@ try {
     }
   });
   backendService.initialize().catch(console.warn);
+  socialService = createSocialService({
+    app: firebaseApp,
+    db,
+    getUser: () => firebaseUser
+  });
   firebaseEnabled = true;
 
   $('firebase-status').textContent =
@@ -286,34 +293,43 @@ async function savePlayer() {
 }
 
 async function loadCloudPlayer(user) {
-  if (!user || !db) {
-    throw new Error('Firebase user or Firestore is unavailable.');
-  }
+  setLoading(true, 'Loading your progress…');
 
   const reference = doc(db, 'users', user.uid);
-  const snapshot = await getDoc(reference);
-
+  const cloudSnapshot = await getDoc(reference);
   const localBackup = JSON.parse(
     localStorage.getItem(`stemQuestBackup_${user.uid}`) || 'null'
   );
 
-  if (snapshot.exists()) {
-    player = mergePlayer(snapshot.data());
-  } else if (localBackup) {
-    player = mergePlayer(localBackup);
-  } else {
-    player = mergePlayer({
-      name: user.displayName || 'STEM learner',
-      avatar: '🧑‍🚀'
-    });
+  player = mergePlayer(
+    cloudSnapshot.exists()
+      ? cloudSnapshot.data()
+      : localBackup || { name: user.displayName || 'Learner' }
+  );
+
+  if (!player.name || player.name === 'Guest') {
+    player.name = user.displayName || 'Learner';
   }
 
-  player.name =
-    player.name ||
-    user.displayName ||
-    'STEM learner';
-
   await savePlayer();
+  await syncSocialProfile();
+  setLoading(false);
+}
+
+async function syncSocialProfile() {
+  if (!firebaseUser || !socialService) return null;
+  try {
+    return await socialService.ensureProfile({
+      displayName: player.name,
+      avatar: player.avatar,
+      level: player.level,
+      region: player.region,
+      regionVisible: player.regionVisible
+    });
+  } catch (error) {
+    console.warn('Social profile sync unavailable:', error);
+    return null;
+  }
 }
 
 if (firebaseEnabled) {
@@ -1638,6 +1654,15 @@ function finishSession() {
     submitTournamentScore(score, time);
   }
 
+  if (session.mode === 'friend-challenge' && session.config.challengeId && socialService) {
+    socialService.submitChallengeScore(session.config.challengeId, score, time)
+      .then(() => toast('Challenge score submitted!'))
+      .catch(error => {
+        console.error(error);
+        toast('Challenge score could not be submitted.');
+      });
+  }
+
   if (session.config.lessonId) {
     const lessonId = session.config.lessonId;
     const stars = calculateLessonStars(score, session.hearts);
@@ -2314,6 +2339,7 @@ function renderProfile() {
   }
 
   applySettings();
+  renderSocialPanel();
 }
 
 $('save-profile-btn').onclick = async () => {
@@ -2339,6 +2365,7 @@ $('save-profile-btn').onclick = async () => {
   player.regionVisible = Boolean($('profile-region-visible')?.checked) && player.region !== 'hidden';
 
   await savePlayer();
+  await syncSocialProfile();
 
   renderProfile();
   renderHome();
@@ -2346,6 +2373,177 @@ $('save-profile-btn').onclick = async () => {
   toast('Profile name saved.');
 };
 
+
+
+let socialDashboardLoading = false;
+
+async function renderSocialPanel() {
+  const panel = $('social-panel');
+  if (!panel) return;
+
+  if (!firebaseUser || !socialService) {
+    panel.innerHTML = `
+      <div class="status-box">Google sign-in is required for friends and challenges.</div>
+    `;
+    return;
+  }
+
+  if (socialDashboardLoading) return;
+  socialDashboardLoading = true;
+  panel.innerHTML = '<div class="status-box">Loading friends…</div>';
+
+  try {
+    const synced = await syncSocialProfile();
+    const dashboard = await socialService.loadDashboard();
+    const ownProfile = dashboard.profile || synced?.profile || {};
+    const currentUid = firebaseUser.uid;
+
+    const requestCards = dashboard.incoming.length
+      ? dashboard.incoming.map(request => {
+          const profile = dashboard.profiles[request.senderUid] || {};
+          return `
+            <div class="social-row">
+              <div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div>
+              <div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Sent you a friend request</small></div>
+              <button class="btn primary" data-friend-response="accept" data-request-id="${escapeHtml(request.id)}">Accept</button>
+              <button class="btn secondary" data-friend-response="reject" data-request-id="${escapeHtml(request.id)}">Reject</button>
+            </div>`;
+        }).join('')
+      : '<p class="muted">No pending friend requests.</p>';
+
+    const friendCards = dashboard.friendships.length
+      ? dashboard.friendships.map(friendship => {
+          const friendUid = friendship.participants.find(uid => uid !== currentUid);
+          const profile = dashboard.profiles[friendUid] || {};
+          return `
+            <div class="social-row">
+              <div class="social-avatar">${escapeHtml(profile.avatar || '🧑‍🚀')}</div>
+              <div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong><small>Level ${Number(profile.level || 1)}</small></div>
+              <button class="btn primary" data-challenge-friend="${escapeHtml(friendUid)}">Challenge</button>
+              <button class="btn secondary" data-remove-friend="${escapeHtml(friendUid)}">Remove</button>
+              <button class="btn danger" data-block-user="${escapeHtml(friendUid)}">Block</button>
+            </div>`;
+        }).join('')
+      : '<p class="muted">Add a friend using their code to start challenging each other.</p>';
+
+    const challengeCards = dashboard.challenges.length
+      ? dashboard.challenges.map(challenge => {
+          const otherUid = challenge.participants.find(uid => uid !== currentUid);
+          const profile = dashboard.profiles[otherUid] || {};
+          const ownScore = challenge.scores?.[currentUid];
+          const otherScore = challenge.scores?.[otherUid];
+          const incomingPending = challenge.status === 'pending' && challenge.opponentUid === currentUid;
+          const playable = challenge.status === 'active' && !ownScore;
+          let action = '';
+          if (incomingPending) {
+            action = `<button class="btn primary" data-challenge-response="accept" data-challenge-id="${challenge.id}">Accept</button><button class="btn secondary" data-challenge-response="decline" data-challenge-id="${challenge.id}">Decline</button>`;
+          } else if (playable) {
+            action = `<button class="btn primary" data-play-challenge="${challenge.id}">Play</button>`;
+          } else if (ownScore) {
+            action = `<span class="badge">Your score: ${ownScore.score}%</span>`;
+          } else {
+            action = `<span class="badge">${escapeHtml(challenge.status)}</span>`;
+          }
+          const result = challenge.status === 'complete' && ownScore && otherScore
+            ? `<small>${ownScore.score > otherScore.score ? '🏆 You won' : ownScore.score < otherScore.score ? 'Good try — rematch anytime' : '🤝 Draw'} · ${ownScore.score}% vs ${otherScore.score}%</small>`
+            : '<small>10 shared mixed questions</small>';
+          return `<div class="social-row"><div class="social-avatar">⚔️</div><div class="grow"><strong>${escapeHtml(profile.displayName || 'Learner')}</strong>${result}</div>${action}</div>`;
+        }).join('')
+      : '<p class="muted">No challenges yet.</p>';
+
+    panel.innerHTML = `
+      <div class="friend-code-card">
+        <div><small>Your private friend code</small><strong id="friend-code-copy">${escapeHtml(ownProfile.friendCode || 'Creating…')}</strong></div>
+        <p class="tiny muted">Share this code only with people you know. It does not reveal your email.</p>
+      </div>
+      <div class="social-add-row">
+        <input id="friend-code-input" class="field" maxlength="12" autocomplete="off" placeholder="Enter friend code">
+        <button id="send-friend-request-btn" class="btn primary">Add friend</button>
+      </div>
+      <h3>Requests</h3><div class="social-list">${requestCards}</div>
+      <h3>Friends</h3><div class="social-list">${friendCards}</div>
+      <h3>Challenges</h3><div class="social-list">${challengeCards}</div>
+    `;
+
+    $('send-friend-request-btn').onclick = async () => {
+      const code = $('friend-code-input').value.trim().toUpperCase();
+      if (!code) return toast('Enter a friend code first.');
+      try {
+        await socialService.sendFriendRequest(code);
+        toast('Friend request sent!');
+        renderSocialPanel();
+      } catch (error) {
+        console.error(error);
+        toast(error?.message?.replace('FirebaseError: ', '') || 'Friend request failed.');
+      }
+    };
+
+    document.querySelectorAll('[data-friend-response]').forEach(button => {
+      button.onclick = async () => {
+        try {
+          await socialService.respondFriendRequest(button.dataset.requestId, button.dataset.friendResponse);
+          toast(button.dataset.friendResponse === 'accept' ? 'Friend added!' : 'Request rejected.');
+          renderSocialPanel();
+        } catch (error) { console.error(error); toast('Could not update request.'); }
+      };
+    });
+
+    document.querySelectorAll('[data-challenge-friend]').forEach(button => {
+      button.onclick = async () => {
+        try {
+          await socialService.createChallenge(button.dataset.challengeFriend);
+          toast('Challenge invitation sent!');
+          renderSocialPanel();
+        } catch (error) { console.error(error); toast('Could not create challenge.'); }
+      };
+    });
+
+    document.querySelectorAll('[data-challenge-response]').forEach(button => {
+      button.onclick = async () => {
+        try {
+          await socialService.respondChallenge(button.dataset.challengeId, button.dataset.challengeResponse);
+          toast(button.dataset.challengeResponse === 'accept' ? 'Challenge accepted!' : 'Challenge declined.');
+          renderSocialPanel();
+        } catch (error) { console.error(error); toast('Could not update challenge.'); }
+      };
+    });
+
+    document.querySelectorAll('[data-play-challenge]').forEach(button => {
+      button.onclick = () => {
+        startSession({
+          mode: 'friend-challenge',
+          challengeId: button.dataset.playChallenge,
+          questions: seededShuffle(allQuestions(), button.dataset.playChallenge).slice(0, 10),
+          timer: 45
+        });
+      };
+    });
+
+    document.querySelectorAll('[data-remove-friend]').forEach(button => {
+      button.onclick = async () => {
+        if (!confirm('Remove this friend?')) return;
+        try { await socialService.removeFriend(button.dataset.removeFriend); toast('Friend removed.'); renderSocialPanel(); }
+        catch (error) { console.error(error); toast('Could not remove friend.'); }
+      };
+    });
+
+    document.querySelectorAll('[data-block-user]').forEach(button => {
+      button.onclick = async () => {
+        if (!confirm('Block this learner? This also removes the friendship.')) return;
+        try { await socialService.blockUser(button.dataset.blockUser); toast('Learner blocked.'); renderSocialPanel(); }
+        catch (error) { console.error(error); toast('Could not block learner.'); }
+      };
+    });
+  } catch (error) {
+    console.error(error);
+    panel.innerHTML = `
+      <div class="status-box content-error">
+        Friends backend is not ready yet. Deploy Cloud Functions and Firestore indexes, then refresh.
+      </div>`;
+  } finally {
+    socialDashboardLoading = false;
+  }
+}
 
 const PROFILE_AVATARS = [
   '🧑‍🚀', '🧙', '🦉', '🤖', '🐼', '🐯',
@@ -2371,6 +2569,7 @@ if ($('edit-avatar-btn')) {
       button.onclick = async () => {
         player.avatar = button.dataset.avatarChoice;
         await savePlayer();
+        await syncSocialProfile();
         closeAppModal();
         syncUI();
         renderProfile();

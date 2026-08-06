@@ -1,0 +1,23 @@
+STEM Quest v11.1 Social Backend RC
+
+Added:
+- Public social profiles separated from private learning progress
+- Unique friend codes
+- Friend requests: send, accept, reject, remove and block
+- Friend list in Profile
+- Challenge invitations, accept/decline and 10-question challenge sessions
+- Secure callable Cloud Functions for all social writes
+- Firestore indexes for requests, friendships and challenges
+- Mobile-friendly social UI
+- App version updated to 11.1.0-rc1
+
+Important deployment order:
+1. Upload the full website project to GitHub Pages.
+2. Publish firestore.rules in Firebase Console or deploy with Firebase CLI.
+3. Deploy indexes: firebase deploy --only firestore:indexes
+4. In the project root run: npm --prefix functions install
+5. Deploy functions: firebase deploy --only functions
+6. Refresh the site, sign in with Google and open Profile.
+
+Friends/challenges require Google sign-in and deployed Cloud Functions.
+Never commit service-account keys or private credentials.
